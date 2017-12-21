@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
+	"github.com/nargott/godash/chaincfg"
+	"github.com/nargott/godash/chaincfg/chainhash"
+	"github.com/nargott/godash/txscript"
 	"github.com/btcsuite/btcutil"
 )
 

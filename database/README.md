@@ -1,9 +1,9 @@
 database
 ========
 
-[![Build Status](http://img.shields.io/travis/btcsuite/btcd.svg)](https://travis-ci.org/btcsuite/btcd)
+[![Build Status](http://img.shields.io/travis/nargott/godash.svg)](https://travis-ci.org/nargott/godash)
 [![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/btcsuite/btcd/database)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/nargott/godash/database)
 
 Package database provides a block and metadata storage database.
 
@@ -14,7 +14,7 @@ and that entity will be btcd.
 
 When a client wants programmatic access to the data provided by btcd, they'll
 likely want to use the [btcrpcclient](https://github.com/btcsuite/btcrpcclient)
-package which makes use of the [JSON-RPC API](https://github.com/btcsuite/btcd/tree/master/docs/json_rpc_api.md).
+package which makes use of the [JSON-RPC API](https://github.com/nargott/godash/tree/master/docs/json_rpc_api.md).
 
 However, this package could be extremely useful for any applications requiring
 Bitcoin block storage capabilities.
@@ -37,16 +37,16 @@ storage, and strict checksums in key areas to ensure data integrity.
 ## Installation and Updating
 
 ```bash
-$ go get -u github.com/btcsuite/btcd/database
+$ go get -u github.com/nargott/godash/database
 ```
 
 ## Examples
 
-* [Basic Usage Example](http://godoc.org/github.com/btcsuite/btcd/database#example-package--BasicUsage)  
+* [Basic Usage Example](http://godoc.org/github.com/nargott/godash/database#example-package--BasicUsage)  
   Demonstrates creating a new database and using a managed read-write
   transaction to store and retrieve metadata.
 
-* [Block Storage and Retrieval Example](http://godoc.org/github.com/btcsuite/btcd/database#example-package--BlockStorageAndRetrieval)  
+* [Block Storage and Retrieval Example](http://godoc.org/github.com/nargott/godash/database#example-package--BlockStorageAndRetrieval)  
   Demonstrates creating a new database, using a managed read-write transaction
   to store a block, and then using a managed read-only transaction to fetch the
   block.

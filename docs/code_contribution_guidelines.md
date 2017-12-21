@@ -239,7 +239,7 @@ Further paragraphs come after blank lines.
 Prefix the summary with the subsystem/package when possible. Many other
 projects make use of the code and this makes it easier for them to tell when
 something they're using has changed. Have a look at [past
-commits](https://github.com/btcsuite/btcd/commits/master) for examples of
+commits](https://github.com/nargott/godash/commits/master) for examples of
 commit messages.
 
 Here are some of the reasons why wrapping your commit messages to 72 columns is

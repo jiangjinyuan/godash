@@ -7,8 +7,8 @@ package txscript
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/nargott/godash/chaincfg"
+	"github.com/nargott/godash/wire"
 	"github.com/btcsuite/btcutil"
 )
 

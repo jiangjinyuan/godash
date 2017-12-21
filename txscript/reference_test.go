@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/nargott/godash/chaincfg/chainhash"
+	"github.com/nargott/godash/wire"
 	"github.com/btcsuite/btcutil"
 )
 

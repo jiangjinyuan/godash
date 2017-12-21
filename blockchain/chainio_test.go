@@ -11,9 +11,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/nargott/godash/chaincfg/chainhash"
+	"github.com/nargott/godash/database"
+	"github.com/nargott/godash/wire"
 )
 
 // TestErrNotInMainChain ensures the functions related to errNotInMainChain work

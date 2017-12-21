@@ -1,9 +1,9 @@
 fullblocktests
 ==============
 
-[![Build Status](http://img.shields.io/travis/btcsuite/btcd.svg)](https://travis-ci.org/btcsuite/btcd)
+[![Build Status](http://img.shields.io/travis/nargott/godash.svg)](https://travis-ci.org/nargott/godash)
 [![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
-[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/btcsuite/btcd/blockchain/fullblocktests)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/nargott/godash/blockchain/fullblocktests)
 
 Package fullblocktests provides a set of full block tests to be used for testing
 the consensus validation rules.  The tests are intended to be flexible enough to
@@ -20,7 +20,7 @@ of blocks that excerise the consensus validation rules.
 ## Installation and Updating
 
 ```bash
-$ go get -u github.com/btcsuite/btcd/blockchain/fullblocktests
+$ go get -u github.com/nargott/godash/blockchain/fullblocktests
 ```
 
 ## License

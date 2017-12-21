@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	_ "github.com/btcsuite/btcd/database/ffldb"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/nargott/godash/chaincfg"
+	"github.com/nargott/godash/chaincfg/chainhash"
+	"github.com/nargott/godash/database"
+	_ "github.com/nargott/godash/database/ffldb"
+	"github.com/nargott/godash/txscript"
+	"github.com/nargott/godash/wire"
 	"github.com/btcsuite/btcutil"
 )
 
