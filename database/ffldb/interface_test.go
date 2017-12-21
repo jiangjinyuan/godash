@@ -1,5 +1,4 @@
 // Copyright (c) 2015-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -26,10 +25,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dashpay/godash/chaincfg"
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/wire"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/database"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 )
 
 var (
@@ -46,7 +46,7 @@ var (
 
 // loadBlocks loads the blocks contained in the testdata directory and returns
 // a slice of them.
-func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*godashutil.Block, error) {
+func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*btcutil.Block, error) {
 	// Open the file that contains the blocks for reading.
 	fi, err := os.Open(dataFile)
 	if err != nil {
@@ -62,8 +62,8 @@ func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*goda
 	dr := bzip2.NewReader(fi)
 
 	// Set the first block as the genesis block.
-	blocks := make([]*godashutil.Block, 0, 256)
-	genesis := godashutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	blocks := make([]*btcutil.Block, 0, 256)
+	genesis := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
 	blocks = append(blocks, genesis)
 
 	// Load the remaining blocks.
@@ -102,7 +102,7 @@ func loadBlocks(t *testing.T, dataFile string, network wire.BitcoinNet) ([]*goda
 		}
 
 		// Deserialize and store the block.
-		block, err := godashutil.NewBlockFromBytes(blockBytes)
+		block, err := btcutil.NewBlockFromBytes(blockBytes)
 		if err != nil {
 			t.Errorf("Failed to parse block %v: %v", height, err)
 			return nil, err
@@ -139,7 +139,7 @@ type testContext struct {
 	db          database.DB
 	bucketDepth int
 	isWritable  bool
-	blocks      []*godashutil.Block
+	blocks      []*btcutil.Block
 }
 
 // keyPair houses a key/value pair.  It is used over maps so ordering can be
@@ -395,11 +395,7 @@ func testNestedBucket(tc *testContext, testBucket database.Bucket) bool {
 	defer func() {
 		tc.bucketDepth--
 	}()
-	if !testBucketInterface(tc, testBucket) {
-		return false
-	}
-
-	return true
+	return testBucketInterface(tc, testBucket)
 }
 
 // testBucketInterface ensures the bucket interface is working properly by
@@ -1121,10 +1117,10 @@ func testFetchBlockIOMissing(tc *testContext, tx database.Tx) bool {
 	// Test the individual block APIs one block at a time to ensure they
 	// return the expected error.  Also, build the data needed to test the
 	// bulk APIs below while looping.
-	allBlockHashes := make([]wire.ShaHash, len(tc.blocks))
+	allBlockHashes := make([]chainhash.Hash, len(tc.blocks))
 	allBlockRegions := make([]database.BlockRegion, len(tc.blocks))
 	for i, block := range tc.blocks {
-		blockHash := block.Sha()
+		blockHash := block.Hash()
 		allBlockHashes[i] = *blockHash
 
 		txLocs, err := block.TxLoc()
@@ -1226,12 +1222,12 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 
 	// Test the individual block APIs one block at a time.  Also, build the
 	// data needed to test the bulk APIs below while looping.
-	allBlockHashes := make([]wire.ShaHash, len(tc.blocks))
+	allBlockHashes := make([]chainhash.Hash, len(tc.blocks))
 	allBlockBytes := make([][]byte, len(tc.blocks))
 	allBlockTxLocs := make([][]wire.TxLoc, len(tc.blocks))
 	allBlockRegions := make([]database.BlockRegion, len(tc.blocks))
 	for i, block := range tc.blocks {
-		blockHash := block.Sha()
+		blockHash := block.Hash()
 		allBlockHashes[i] = *blockHash
 
 		blockBytes, err := block.Bytes()
@@ -1323,7 +1319,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 
 		// Ensure fetching a block that doesn't exist returns the
 		// expected error.
-		badBlockHash := &wire.ShaHash{}
+		badBlockHash := &chainhash.Hash{}
 		testName := fmt.Sprintf("FetchBlock(%s) invalid block",
 			badBlockHash)
 		wantErrCode := database.ErrBlockNotFound
@@ -1466,9 +1462,9 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 	// Ensure fetching blocks for which one doesn't exist returns the
 	// expected error.
 	testName := "FetchBlocks invalid hash"
-	badBlockHashes := make([]wire.ShaHash, len(allBlockHashes)+1)
+	badBlockHashes := make([]chainhash.Hash, len(allBlockHashes)+1)
 	copy(badBlockHashes, allBlockHashes)
-	badBlockHashes[len(badBlockHashes)-1] = wire.ShaHash{}
+	badBlockHashes[len(badBlockHashes)-1] = chainhash.Hash{}
 	wantErrCode := database.ErrBlockNotFound
 	_, err = tx.FetchBlocks(badBlockHashes)
 	if !checkDbError(tc.t, testName, err, wantErrCode) {
@@ -1488,7 +1484,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 	testName = "FetchBlockRegions invalid hash"
 	badBlockRegions := make([]database.BlockRegion, len(allBlockRegions)+1)
 	copy(badBlockRegions, allBlockRegions)
-	badBlockRegions[len(badBlockRegions)-1].Hash = &wire.ShaHash{}
+	badBlockRegions[len(badBlockRegions)-1].Hash = &chainhash.Hash{}
 	wantErrCode = database.ErrBlockNotFound
 	_, err = tx.FetchBlockRegions(badBlockRegions)
 	if !checkDbError(tc.t, testName, err, wantErrCode) {
@@ -1504,11 +1500,7 @@ func testFetchBlockIO(tc *testContext, tx database.Tx) bool {
 	}
 	wantErrCode = database.ErrBlockRegionInvalid
 	_, err = tx.FetchBlockRegions(badBlockRegions)
-	if !checkDbError(tc.t, testName, err, wantErrCode) {
-		return false
-	}
-
-	return true
+	return checkDbError(tc.t, testName, err, wantErrCode)
 }
 
 // testBlockIOTxInterface ensures that the block IO interface works as expected
@@ -1844,10 +1836,10 @@ func testClosedTxInterface(tc *testContext, tx database.Tx) bool {
 	// Test the individual block APIs one block at a time to ensure they
 	// return the expected error.  Also, build the data needed to test the
 	// bulk APIs below while looping.
-	allBlockHashes := make([]wire.ShaHash, len(tc.blocks))
+	allBlockHashes := make([]chainhash.Hash, len(tc.blocks))
 	allBlockRegions := make([]database.BlockRegion, len(tc.blocks))
 	for i, block := range tc.blocks {
-		blockHash := block.Sha()
+		blockHash := block.Hash()
 		allBlockHashes[i] = *blockHash
 
 		txLocs, err := block.TxLoc()
@@ -1942,11 +1934,7 @@ func testClosedTxInterface(tc *testContext, tx database.Tx) bool {
 		return false
 	}
 	err = tx.Commit()
-	if !checkDbError(tc.t, "closed tx commit", err, wantErrCode) {
-		return false
-	}
-
-	return true
+	return checkDbError(tc.t, "closed tx commit", err, wantErrCode)
 }
 
 // testTxClosed ensures that both the metadata and block IO API functions behave
@@ -2015,17 +2003,14 @@ func testConcurrecy(tc *testContext) bool {
 	// test failures on slower systems.
 	startTime := time.Now()
 	err := tc.db.View(func(tx database.Tx) error {
-		_, err := tx.FetchBlock(tc.blocks[0].Sha())
-		if err != nil {
-			return err
-		}
-		return nil
+		_, err := tx.FetchBlock(tc.blocks[0].Hash())
+		return err
 	})
 	if err != nil {
 		tc.t.Errorf("Unexpected error in view: %v", err)
 		return false
 	}
-	elapsed := time.Now().Sub(startTime)
+	elapsed := time.Since(startTime)
 	if sleepTime < elapsed {
 		sleepTime = elapsed
 	}
@@ -2040,11 +2025,8 @@ func testConcurrecy(tc *testContext) bool {
 	reader := func(blockNum int) {
 		err := tc.db.View(func(tx database.Tx) error {
 			time.Sleep(sleepTime)
-			_, err := tx.FetchBlock(tc.blocks[blockNum].Sha())
-			if err != nil {
-				return err
-			}
-			return nil
+			_, err := tx.FetchBlock(tc.blocks[blockNum].Hash())
+			return err
 		})
 		if err != nil {
 			tc.t.Errorf("Unexpected error in concurrent view: %v",
@@ -2065,7 +2047,7 @@ func testConcurrecy(tc *testContext) bool {
 			return false
 		}
 	}
-	elapsed = time.Now().Sub(startTime)
+	elapsed = time.Since(startTime)
 	tc.t.Logf("%d concurrent reads of same block elapsed: %v", numReaders,
 		elapsed)
 
@@ -2088,7 +2070,7 @@ func testConcurrecy(tc *testContext) bool {
 			return false
 		}
 	}
-	elapsed = time.Now().Sub(startTime)
+	elapsed = time.Since(startTime)
 	tc.t.Logf("%d concurrent reads of different blocks elapsed: %v",
 		numReaders, elapsed)
 
@@ -2142,11 +2124,7 @@ func testConcurrecy(tc *testContext) bool {
 	// Set some data the readers are expecting to not find and signal the
 	// readers the write is done by closing the writeComplete channel.
 	err = tc.db.Update(func(tx database.Tx) error {
-		err := tx.Metadata().Put(concurrentKey, concurrentVal)
-		if err != nil {
-			return err
-		}
-		return nil
+		return tx.Metadata().Put(concurrentKey, concurrentVal)
 	})
 	if err != nil {
 		tc.t.Errorf("Unexpected error in update: %v", err)
@@ -2187,7 +2165,7 @@ func testConcurrecy(tc *testContext) bool {
 			return false
 		}
 	}
-	elapsed = time.Now().Sub(startTime)
+	elapsed = time.Since(startTime)
 	tc.t.Logf("%d concurrent writers elapsed using sleep time %v: %v",
 		numWriters, writeSleepTime, elapsed)
 

@@ -1,5 +1,4 @@
 // Copyright (c) 2013-2015 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,9 +13,9 @@ import (
 	"regexp"
 	"strings"
 
-	flags "github.com/btcsuite/go-flags"
-	"github.com/dashpay/godash/btcjson"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/btcjson"
+	"github.com/btcsuite/btcutil"
+	flags "github.com/jessevdk/go-flags"
 )
 
 const (
@@ -27,9 +26,9 @@ const (
 )
 
 var (
-	btcdHomeDir           = godashutil.AppDataDir("btcd", false)
-	btcctlHomeDir         = godashutil.AppDataDir("btcctl", false)
-	btcwalletHomeDir      = godashutil.AppDataDir("btcwallet", false)
+	btcdHomeDir           = btcutil.AppDataDir("btcd", false)
+	btcctlHomeDir         = btcutil.AppDataDir("btcctl", false)
+	btcwalletHomeDir      = btcutil.AppDataDir("btcwallet", false)
 	defaultConfigFile     = filepath.Join(btcctlHomeDir, "btcctl.conf")
 	defaultRPCServer      = "localhost"
 	defaultRPCCertFile    = filepath.Join(btcdHomeDir, "rpc.cert")
@@ -176,20 +175,13 @@ func loadConfig() (*config, []string, error) {
 		RPCCert:    defaultRPCCertFile,
 	}
 
-	// Create the home directory if it doesn't already exist.
-	err := os.MkdirAll(btcdHomeDir, 0700)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(-1)
-	}
-
 	// Pre-parse the command line options to see if an alternative config
 	// file, the version flag, or the list commands flag was specified.  Any
 	// errors aside from the help message error can be ignored here since
 	// they will be caught by the final parse below.
 	preCfg := cfg
 	preParser := flags.NewParser(&preCfg, flags.HelpFlag)
-	_, err = preParser.Parse()
+	_, err := preParser.Parse()
 	if err != nil {
 		if e, ok := err.(*flags.Error); ok && e.Type == flags.ErrHelp {
 			fmt.Fprintln(os.Stderr, err)
@@ -219,7 +211,15 @@ func loadConfig() (*config, []string, error) {
 	}
 
 	if _, err := os.Stat(preCfg.ConfigFile); os.IsNotExist(err) {
-		err := createDefaultConfigFile(preCfg.ConfigFile)
+		// Use config file for RPC server to create default btcctl config
+		var serverConfigPath string
+		if preCfg.Wallet {
+			serverConfigPath = filepath.Join(btcwalletHomeDir, "btcwallet.conf")
+		} else {
+			serverConfigPath = filepath.Join(btcdHomeDir, "btcd.conf")
+		}
+
+		err := createDefaultConfigFile(preCfg.ConfigFile, serverConfigPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating a default config file: %v\n", err)
 		}
@@ -280,20 +280,16 @@ func loadConfig() (*config, []string, error) {
 }
 
 // createDefaultConfig creates a basic config file at the given destination path.
-// For this it tries to read the btcd config file at its default path, and extract
-// the RPC user and password from it.
-func createDefaultConfigFile(destinationPath string) error {
-	// Create the destination directory if it does not exists
-	os.MkdirAll(filepath.Dir(destinationPath), 0700)
-
-	// Read btcd.conf from its default path
-	btcdConfigPath := filepath.Join(btcdHomeDir, "btcd.conf")
-	btcdConfigFile, err := os.Open(btcdConfigPath)
+// For this it tries to read the config file for the RPC server (either btcd or
+// btcwallet), and extract the RPC user and password from it.
+func createDefaultConfigFile(destinationPath, serverConfigPath string) error {
+	// Read the RPC server config
+	serverConfigFile, err := os.Open(serverConfigPath)
 	if err != nil {
 		return err
 	}
-	defer btcdConfigFile.Close()
-	content, err := ioutil.ReadAll(btcdConfigFile)
+	defer serverConfigFile.Close()
+	content, err := ioutil.ReadAll(serverConfigFile)
 	if err != nil {
 		return err
 	}
@@ -320,14 +316,34 @@ func createDefaultConfigFile(destinationPath string) error {
 		return nil
 	}
 
+	// Extract the notls
+	noTLSRegexp, err := regexp.Compile(`(?m)^\s*notls=(0|1)(?:\s|$)`)
+	if err != nil {
+		return err
+	}
+	noTLSSubmatches := noTLSRegexp.FindSubmatch(content)
+
+	// Create the destination directory if it does not exists
+	err = os.MkdirAll(filepath.Dir(destinationPath), 0700)
+	if err != nil {
+		return err
+	}
+
 	// Create the destination file and write the rpcuser and rpcpass to it
-	dest, err := os.OpenFile(destinationPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0700)
+	dest, err := os.OpenFile(destinationPath,
+		os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
 	defer dest.Close()
 
-	dest.WriteString(fmt.Sprintf("rpcuser=%s\nrpcpass=%s", string(userSubmatches[1]), string(passSubmatches[1])))
+	destString := fmt.Sprintf("rpcuser=%s\nrpcpass=%s\n",
+		string(userSubmatches[1]), string(passSubmatches[1]))
+	if noTLSSubmatches != nil {
+		destString += fmt.Sprintf("notls=%s\n", noTLSSubmatches[1])
+	}
+
+	dest.WriteString(destString)
 
 	return nil
 }

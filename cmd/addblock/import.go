@@ -1,5 +1,4 @@
 // Copyright (c) 2013-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,14 +11,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dashpay/godash/blockchain"
-	"github.com/dashpay/godash/blockchain/indexers"
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/wire"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/blockchain/indexers"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/database"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 )
 
-var zeroHash = wire.ShaHash{}
+var zeroHash = chainhash.Hash{}
 
 // importResults houses the stats and result as an import operation.
 type importResults struct {
@@ -94,7 +94,7 @@ func (bi *blockImporter) readBlock() ([]byte, error) {
 // with any potential errors.
 func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	// Deserialize the block which includes checks for malformed blocks.
-	block, err := godashutil.NewBlockFromBytes(serializedBlock)
+	block, err := btcutil.NewBlockFromBytes(serializedBlock)
 	if err != nil {
 		return false, err
 	}
@@ -104,8 +104,8 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	bi.receivedLogTx += int64(len(block.MsgBlock().Transactions))
 
 	// Skip blocks that already exist.
-	blockSha := block.Sha()
-	exists, err := bi.chain.HaveBlock(blockSha)
+	blockHash := block.Hash()
+	exists, err := bi.chain.HaveBlock(blockHash)
 	if err != nil {
 		return false, err
 	}
@@ -129,13 +129,18 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 
 	// Ensure the blocks follows all of the chain rules and match up to the
 	// known checkpoints.
-	isOrphan, err := bi.chain.ProcessBlock(block, blockchain.BFFastAdd)
+	isMainChain, isOrphan, err := bi.chain.ProcessBlock(block,
+		blockchain.BFFastAdd)
 	if err != nil {
 		return false, err
 	}
+	if !isMainChain {
+		return false, fmt.Errorf("import file contains an block that "+
+			"does not extend the main chain: %v", blockHash)
+	}
 	if isOrphan {
 		return false, fmt.Errorf("import file contains an orphan "+
-			"block: %v", blockSha)
+			"block: %v", blockHash)
 	}
 
 	return true, nil

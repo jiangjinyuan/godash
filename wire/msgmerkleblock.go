@@ -1,5 +1,4 @@
-// Copyright (c) 2014-2015 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
+// Copyright (c) 2014-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,6 +7,8 @@ package wire
 import (
 	"fmt"
 	"io"
+
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 // maxFlagsPerMerkleBlock is the maximum number of flag bytes that could
@@ -23,12 +24,12 @@ const maxFlagsPerMerkleBlock = maxTxPerBlock / 8
 type MsgMerkleBlock struct {
 	Header       BlockHeader
 	Transactions uint32
-	Hashes       []*ShaHash
+	Hashes       []*chainhash.Hash
 	Flags        []byte
 }
 
 // AddTxHash adds a new transaction hash to the message.
-func (msg *MsgMerkleBlock) AddTxHash(hash *ShaHash) error {
+func (msg *MsgMerkleBlock) AddTxHash(hash *chainhash.Hash) error {
 	if len(msg.Hashes)+1 > maxTxPerBlock {
 		str := fmt.Sprintf("too many tx hashes for message [max %v]",
 			maxTxPerBlock)
@@ -41,7 +42,7 @@ func (msg *MsgMerkleBlock) AddTxHash(hash *ShaHash) error {
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
-func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32) error {
+func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error {
 	if pver < BIP0037Version {
 		str := fmt.Sprintf("merkleblock message invalid for protocol "+
 			"version %d", pver)
@@ -71,8 +72,8 @@ func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32) error {
 
 	// Create a contiguous slice of hashes to deserialize into in order to
 	// reduce the number of allocations.
-	hashes := make([]ShaHash, count)
-	msg.Hashes = make([]*ShaHash, 0, count)
+	hashes := make([]chainhash.Hash, count)
+	msg.Hashes = make([]*chainhash.Hash, 0, count)
 	for i := uint64(0); i < count; i++ {
 		hash := &hashes[i]
 		err := readElement(r, hash)
@@ -84,16 +85,12 @@ func (msg *MsgMerkleBlock) BtcDecode(r io.Reader, pver uint32) error {
 
 	msg.Flags, err = ReadVarBytes(r, pver, maxFlagsPerMerkleBlock,
 		"merkle block flags size")
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
-func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32) error {
+func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
 	if pver < BIP0037Version {
 		str := fmt.Sprintf("merkleblock message invalid for protocol "+
 			"version %d", pver)
@@ -135,12 +132,7 @@ func (msg *MsgMerkleBlock) BtcEncode(w io.Writer, pver uint32) error {
 		}
 	}
 
-	err = WriteVarBytes(w, pver, msg.Flags)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return WriteVarBytes(w, pver, msg.Flags)
 }
 
 // Command returns the protocol command string for the message.  This is part
@@ -161,7 +153,7 @@ func NewMsgMerkleBlock(bh *BlockHeader) *MsgMerkleBlock {
 	return &MsgMerkleBlock{
 		Header:       *bh,
 		Transactions: 0,
-		Hashes:       make([]*ShaHash, 0),
+		Hashes:       make([]*chainhash.Hash, 0),
 		Flags:        make([]byte, 0),
 	}
 }

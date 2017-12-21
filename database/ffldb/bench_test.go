@@ -1,5 +1,4 @@
 // Copyright (c) 2015-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/dashpay/godash/chaincfg"
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/database"
+	"github.com/btcsuite/btcutil"
 )
 
 // BenchmarkBlockHeader benchmarks how long it takes to load the mainnet genesis
@@ -29,11 +28,8 @@ func BenchmarkBlockHeader(b *testing.B) {
 	defer os.RemoveAll(dbPath)
 	defer db.Close()
 	err = db.Update(func(tx database.Tx) error {
-		block := godashutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
-		if err := tx.StoreBlock(block); err != nil {
-			return err
-		}
-		return nil
+		block := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+		return tx.StoreBlock(block)
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -73,11 +69,8 @@ func BenchmarkBlock(b *testing.B) {
 	defer os.RemoveAll(dbPath)
 	defer db.Close()
 	err = db.Update(func(tx database.Tx) error {
-		block := godashutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
-		if err := tx.StoreBlock(block); err != nil {
-			return err
-		}
-		return nil
+		block := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+		return tx.StoreBlock(block)
 	})
 	if err != nil {
 		b.Fatal(err)

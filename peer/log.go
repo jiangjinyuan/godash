@@ -1,20 +1,18 @@
-// Copyright (c) 2015 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
+// Copyright (c) 2015-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package peer
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btclog"
-	"github.com/dashpay/godash/txscript"
-	"github.com/dashpay/godash/wire"
 )
 
 const (
@@ -34,39 +32,14 @@ func init() {
 }
 
 // DisableLog disables all library log output.  Logging output is disabled
-// by default until either UseLogger or SetLogWriter are called.
+// by default until UseLogger is called.
 func DisableLog() {
 	log = btclog.Disabled
 }
 
 // UseLogger uses a specified Logger to output package logging info.
-// This should be used in preference to SetLogWriter if the caller is also
-// using btclog.
 func UseLogger(logger btclog.Logger) {
 	log = logger
-}
-
-// SetLogWriter uses a specified io.Writer to output package logging info.
-// This allows a caller to direct package logging output without needing a
-// dependency on seelog.  If the caller is also using btclog, UseLogger should
-// be used instead.
-func SetLogWriter(w io.Writer, level string) error {
-	if w == nil {
-		return errors.New("nil writer")
-	}
-
-	lvl, ok := btclog.LogLevelFromString(level)
-	if !ok {
-		return errors.New("invalid log level")
-	}
-
-	l, err := btclog.NewLoggerFromWriter(w, lvl)
-	if err != nil {
-		return err
-	}
-
-	UseLogger(l)
-	return nil
 }
 
 // LogClosure is a closure that can be printed with %v to be used to
@@ -118,8 +91,12 @@ func invSummary(invList []*wire.InvVect) string {
 		switch iv.Type {
 		case wire.InvTypeError:
 			return fmt.Sprintf("error %s", iv.Hash)
+		case wire.InvTypeWitnessBlock:
+			return fmt.Sprintf("witness block %s", iv.Hash)
 		case wire.InvTypeBlock:
 			return fmt.Sprintf("block %s", iv.Hash)
+		case wire.InvTypeWitnessTx:
+			return fmt.Sprintf("witness tx %s", iv.Hash)
 		case wire.InvTypeTx:
 			return fmt.Sprintf("tx %s", iv.Hash)
 		}
@@ -132,7 +109,7 @@ func invSummary(invList []*wire.InvVect) string {
 }
 
 // locatorSummary returns a block locator as a human-readable string.
-func locatorSummary(locator []*wire.ShaHash, stopHash *wire.ShaHash) string {
+func locatorSummary(locator []*chainhash.Hash, stopHash *chainhash.Hash) string {
 	if len(locator) > 0 {
 		return fmt.Sprintf("locator %s, stop %s", locator[0], stopHash)
 	}
@@ -151,7 +128,7 @@ func sanitizeString(str string, maxLength uint) string {
 
 	// Strip any characters not in the safeChars string removed.
 	str = strings.Map(func(r rune) rune {
-		if strings.IndexRune(safeChars, r) >= 0 {
+		if strings.ContainsRune(safeChars, r) {
 			return r
 		}
 		return -1
@@ -196,12 +173,12 @@ func messageSummary(msg wire.Message) string {
 
 	case *wire.MsgTx:
 		return fmt.Sprintf("hash %s, %d inputs, %d outputs, lock %s",
-			msg.TxSha(), len(msg.TxIn), len(msg.TxOut),
+			msg.TxHash(), len(msg.TxIn), len(msg.TxOut),
 			formatLockTime(msg.LockTime))
 
 	case *wire.MsgBlock:
 		header := &msg.Header
-		return fmt.Sprintf("hash %s, ver %d, %d tx, %s", msg.BlockSha(),
+		return fmt.Sprintf("hash %s, ver %d, %d tx, %s", msg.BlockHash(),
 			header.Version, len(msg.Transactions), header.Timestamp)
 
 	case *wire.MsgInv:

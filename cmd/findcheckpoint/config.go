@@ -1,5 +1,4 @@
 // Copyright (c) 2013-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,12 +9,12 @@ import (
 	"os"
 	"path/filepath"
 
-	flags "github.com/btcsuite/go-flags"
-	"github.com/dashpay/godash/chaincfg"
-	"github.com/dashpay/godash/database"
-	_ "github.com/dashpay/godash/database/ffldb"
-	"github.com/dashpay/godash/wire"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/database"
+	_ "github.com/btcsuite/btcd/database/ffldb"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
+	flags "github.com/jessevdk/go-flags"
 )
 
 const (
@@ -26,7 +25,7 @@ const (
 )
 
 var (
-	btcdHomeDir     = godashutil.AppDataDir("btcd", false)
+	btcdHomeDir     = btcutil.AppDataDir("btcd", false)
 	defaultDataDir  = filepath.Join(btcdHomeDir, "data")
 	knownDbTypes    = database.SupportedDrivers()
 	activeNetParams = &chaincfg.MainNetParams

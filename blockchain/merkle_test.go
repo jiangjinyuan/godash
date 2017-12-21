@@ -1,21 +1,19 @@
-// Copyright (c) 2013-2014 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockchain_test
+package blockchain
 
 import (
 	"testing"
 
-	"github.com/dashpay/godash/blockchain"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcutil"
 )
 
 // TestMerkle tests the BuildMerkleTreeStore API.
 func TestMerkle(t *testing.T) {
-	block := godashutil.NewBlock(&Block100000)
-	merkles := blockchain.BuildMerkleTreeStore(block.Transactions())
+	block := btcutil.NewBlock(&Block100000)
+	merkles := BuildMerkleTreeStore(block.Transactions(), false)
 	calculatedMerkleRoot := merkles[len(merkles)-1]
 	wantMerkle := &Block100000.Header.MerkleRoot
 	if !wantMerkle.IsEqual(calculatedMerkleRoot) {

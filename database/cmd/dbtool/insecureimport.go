@@ -1,5 +1,4 @@
 // Copyright (c) 2015-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,9 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/wire"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/database"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 )
 
 // importCmd defines the configuration options for the insecureimport command.
@@ -33,7 +33,7 @@ var (
 
 	// zeroHash is a simply a hash with all zeros.  It is defined here to
 	// avoid creating it multiple times.
-	zeroHash = wire.ShaHash{}
+	zeroHash = chainhash.Hash{}
 )
 
 // importResults houses the stats and result as an import operation.
@@ -108,7 +108,7 @@ func (bi *blockImporter) readBlock() ([]byte, error) {
 // NOTE: This is not a safe import as it does not verify chain rules.
 func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	// Deserialize the block which includes checks for malformed blocks.
-	block, err := godashutil.NewBlockFromBytes(serializedBlock)
+	block, err := btcutil.NewBlockFromBytes(serializedBlock)
 	if err != nil {
 		return false, err
 	}
@@ -120,11 +120,8 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 	// Skip blocks that already exist.
 	var exists bool
 	err = bi.db.View(func(tx database.Tx) error {
-		exists, err = tx.HasBlock(block.Sha())
-		if err != nil {
-			return err
-		}
-		return nil
+		exists, err = tx.HasBlock(block.Hash())
+		return err
 	})
 	if err != nil {
 		return false, err
@@ -139,10 +136,7 @@ func (bi *blockImporter) processBlock(serializedBlock []byte) (bool, error) {
 		var exists bool
 		err := bi.db.View(func(tx database.Tx) error {
 			exists, err = tx.HasBlock(prevHash)
-			if err != nil {
-				return err
-			}
-			return nil
+			return err
 		})
 		if err != nil {
 			return false, err

@@ -1,5 +1,4 @@
-// Copyright (c) 2014-2015 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
+// Copyright (c) 2014-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,23 +8,24 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/dashpay/godash/btcec"
-	"github.com/dashpay/godash/chaincfg"
-	"github.com/dashpay/godash/txscript"
-	"github.com/dashpay/godash/wire"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 )
 
 // This example demonstrates creating a script which pays to a bitcoin address.
 // It also prints the created script hex and uses the DisasmString function to
 // display the disassembled script.
 func ExamplePayToAddrScript() {
-	// Parse the address to send the coins to into a godashutil.Address
+	// Parse the address to send the coins to into a btcutil.Address
 	// which is useful to ensure the accuracy of the address and determine
 	// the address type.  It is also required for the upcoming call to
 	// PayToAddrScript.
 	addressStr := "12gpXQVcCL2qhTNQgyLVdCFG2Qs2px98nV"
-	address, err := godashutil.DecodeAddress(addressStr, &chaincfg.MainNetParams)
+	address, err := btcutil.DecodeAddress(addressStr, &chaincfg.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -90,8 +90,8 @@ func ExampleSignTxOutput() {
 		return
 	}
 	privKey, pubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBytes)
-	pubKeyHash := godashutil.Hash160(pubKey.SerializeCompressed())
-	addr, err := godashutil.NewAddressPubKeyHash(pubKeyHash,
+	pubKeyHash := btcutil.Hash160(pubKey.SerializeCompressed())
+	addr, err := btcutil.NewAddressPubKeyHash(pubKeyHash,
 		&chaincfg.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
@@ -101,9 +101,9 @@ func ExampleSignTxOutput() {
 	// For this example, create a fake transaction that represents what
 	// would ordinarily be the real transaction that is being spent.  It
 	// contains a single output that pays to address in the amount of 1 BTC.
-	originTx := wire.NewMsgTx()
-	prevOut := wire.NewOutPoint(&wire.ShaHash{}, ^uint32(0))
-	txIn := wire.NewTxIn(prevOut, []byte{txscript.OP_0, txscript.OP_0})
+	originTx := wire.NewMsgTx(wire.TxVersion)
+	prevOut := wire.NewOutPoint(&chainhash.Hash{}, ^uint32(0))
+	txIn := wire.NewTxIn(prevOut, []byte{txscript.OP_0, txscript.OP_0}, nil)
 	originTx.AddTxIn(txIn)
 	pkScript, err := txscript.PayToAddrScript(addr)
 	if err != nil {
@@ -112,16 +112,16 @@ func ExampleSignTxOutput() {
 	}
 	txOut := wire.NewTxOut(100000000, pkScript)
 	originTx.AddTxOut(txOut)
-	originTxHash := originTx.TxSha()
+	originTxHash := originTx.TxHash()
 
 	// Create the transaction to redeem the fake transaction.
-	redeemTx := wire.NewMsgTx()
+	redeemTx := wire.NewMsgTx(wire.TxVersion)
 
 	// Add the input(s) the redeeming transaction will spend.  There is no
 	// signature script at this point since it hasn't been created or signed
 	// yet, hence nil is provided for it.
 	prevOut = wire.NewOutPoint(&originTxHash, 0)
-	txIn = wire.NewTxIn(prevOut, nil)
+	txIn = wire.NewTxIn(prevOut, nil, nil)
 	redeemTx.AddTxIn(txIn)
 
 	// Ordinarily this would contain that actual destination of the funds,
@@ -130,7 +130,7 @@ func ExampleSignTxOutput() {
 	redeemTx.AddTxOut(txOut)
 
 	// Sign the redeeming transaction.
-	lookupKey := func(a godashutil.Address) (*btcec.PrivateKey, bool, error) {
+	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
 		// Ordinarily this function would involve looking up the private
 		// key for the provided address, but since the only thing being
 		// signed in this example uses the address associated with the
@@ -166,7 +166,7 @@ func ExampleSignTxOutput() {
 		txscript.ScriptStrictMultiSig |
 		txscript.ScriptDiscourageUpgradableNops
 	vm, err := txscript.NewEngine(originTx.TxOut[0].PkScript, redeemTx, 0,
-		flags, nil)
+		flags, nil, nil, -1)
 	if err != nil {
 		fmt.Println(err)
 		return

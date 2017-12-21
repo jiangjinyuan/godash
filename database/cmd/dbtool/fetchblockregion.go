@@ -1,5 +1,4 @@
 // Copyright (c) 2015-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/wire"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/database"
 )
 
 // blockRegionCmd defines the configuration options for the fetchblockregion
@@ -45,7 +44,7 @@ func (cmd *blockRegionCmd) Execute(args []string) error {
 	}
 
 	// Parse arguments.
-	blockHash, err := wire.NewShaHashFromStr(args[0])
+	blockHash, err := chainhash.NewHashFromStr(args[0])
 	if err != nil {
 		return err
 	}
@@ -78,8 +77,8 @@ func (cmd *blockRegionCmd) Execute(args []string) error {
 		if err != nil {
 			return err
 		}
-		log.Infof("Loaded block region in %v", time.Now().Sub(startTime))
-		log.Infof("Double SHA256: %s", wire.DoubleSha256SH(regionBytes))
+		log.Infof("Loaded block region in %v", time.Since(startTime))
+		log.Infof("Double Hash: %s", chainhash.DoubleHashH(regionBytes))
 		log.Infof("Region Hex: %s", hex.EncodeToString(regionBytes))
 		return nil
 	})

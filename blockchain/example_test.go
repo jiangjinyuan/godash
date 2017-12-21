@@ -1,5 +1,4 @@
 // Copyright (c) 2014-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,11 +10,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/dashpay/godash/blockchain"
-	"github.com/dashpay/godash/chaincfg"
-	"github.com/dashpay/godash/database"
-	_ "github.com/dashpay/godash/database/ffldb"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/database"
+	_ "github.com/btcsuite/btcd/database/ffldb"
+	"github.com/btcsuite/btcutil"
 )
 
 // This example demonstrates how to create a new chain instance and use
@@ -59,12 +58,14 @@ func ExampleBlockChain_ProcessBlock() {
 	// Process a block.  For this example, we are going to intentionally
 	// cause an error by trying to process the genesis block which already
 	// exists.
-	genesisBlock := godashutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
-	isOrphan, err := chain.ProcessBlock(genesisBlock, blockchain.BFNone)
+	genesisBlock := btcutil.NewBlock(chaincfg.MainNetParams.GenesisBlock)
+	isMainChain, isOrphan, err := chain.ProcessBlock(genesisBlock,
+		blockchain.BFNone)
 	if err != nil {
 		fmt.Printf("Failed to process block: %v\n", err)
 		return
 	}
+	fmt.Printf("Block accepted. Is it on the main chain?: %v", isMainChain)
 	fmt.Printf("Block accepted. Is it an orphan?: %v", isOrphan)
 
 	// Output:

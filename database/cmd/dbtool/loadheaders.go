@@ -1,5 +1,4 @@
 // Copyright (c) 2015-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,8 +7,8 @@ package main
 import (
 	"time"
 
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/wire"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/database"
 )
 
 // headersCmd defines the configuration options for the loadheaders command.
@@ -53,7 +52,7 @@ func (cmd *headersCmd) Execute(args []string) error {
 			numLoaded := 0
 			startTime := time.Now()
 			blockIdxBucket.ForEach(func(k, v []byte) error {
-				var hash wire.ShaHash
+				var hash chainhash.Hash
 				copy(hash[:], k)
 				_, err := tx.FetchBlockHeader(&hash)
 				if err != nil {
@@ -63,22 +62,18 @@ func (cmd *headersCmd) Execute(args []string) error {
 				return nil
 			})
 			log.Infof("Loaded %d headers in %v", numLoaded,
-				time.Now().Sub(startTime))
+				time.Since(startTime))
 			return nil
 		})
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return err
 	}
 
 	// Bulk load headers.
 	err = db.View(func(tx database.Tx) error {
 		blockIdxBucket := tx.Metadata().Bucket(blockIdxName)
-		hashes := make([]wire.ShaHash, 0, 500000)
+		hashes := make([]chainhash.Hash, 0, 500000)
 		blockIdxBucket.ForEach(func(k, v []byte) error {
-			var hash wire.ShaHash
+			var hash chainhash.Hash
 			copy(hash[:], k)
 			hashes = append(hashes, hash)
 			return nil
@@ -91,12 +86,8 @@ func (cmd *headersCmd) Execute(args []string) error {
 			return err
 		}
 		log.Infof("Loaded %d headers in %v", len(hdrs),
-			time.Now().Sub(startTime))
+			time.Since(startTime))
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

@@ -1,5 +1,4 @@
-// Copyright (c) 2013-2014 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -23,7 +22,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dashpay/godash/wire"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // AddrManager provides a concurrency safe address manager for caching potential
@@ -95,8 +95,6 @@ const (
 	// needAddressThreshold is the number of addresses under which the
 	// address manager will claim to need more addresses.
 	needAddressThreshold = 1000
-
-	newAddressBufferSize = 50
 
 	// dumpAddressInterval is the interval used to dump the address
 	// cache to disk for future use.
@@ -171,7 +169,7 @@ func (a *AddrManager) updateAddress(netAddr, srcAddr *wire.NetAddress) {
 	addr := NetAddressKey(netAddr)
 	ka := a.find(netAddr)
 	if ka != nil {
-		// TODO(oga) only update addresses periodically.
+		// TODO: only update addresses periodically.
 		// Update the last seen time and services.
 		// note that to prevent causing excess garbage on getaddr
 		// messages the netaddresses in addrmaanger are *immutable*,
@@ -300,7 +298,7 @@ func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddress) int {
 	data1 = append(data1, a.key[:]...)
 	data1 = append(data1, []byte(GroupKey(netAddr))...)
 	data1 = append(data1, []byte(GroupKey(srcAddr))...)
-	hash1 := wire.DoubleSha256(data1)
+	hash1 := chainhash.DoubleHashB(data1)
 	hash64 := binary.LittleEndian.Uint64(hash1)
 	hash64 %= newBucketsPerGroup
 	var hashbuf [8]byte
@@ -310,7 +308,7 @@ func (a *AddrManager) getNewBucket(netAddr, srcAddr *wire.NetAddress) int {
 	data2 = append(data2, GroupKey(srcAddr)...)
 	data2 = append(data2, hashbuf[:]...)
 
-	hash2 := wire.DoubleSha256(data2)
+	hash2 := chainhash.DoubleHashB(data2)
 	return int(binary.LittleEndian.Uint64(hash2) % newBucketCount)
 }
 
@@ -320,7 +318,7 @@ func (a *AddrManager) getTriedBucket(netAddr *wire.NetAddress) int {
 	data1 := []byte{}
 	data1 = append(data1, a.key[:]...)
 	data1 = append(data1, []byte(NetAddressKey(netAddr))...)
-	hash1 := wire.DoubleSha256(data1)
+	hash1 := chainhash.DoubleHashB(data1)
 	hash64 := binary.LittleEndian.Uint64(hash1)
 	hash64 %= triedBucketsPerGroup
 	var hashbuf [8]byte
@@ -330,7 +328,7 @@ func (a *AddrManager) getTriedBucket(netAddr *wire.NetAddress) int {
 	data2 = append(data2, GroupKey(netAddr)...)
 	data2 = append(data2, hashbuf[:]...)
 
-	hash2 := wire.DoubleSha256(data2)
+	hash2 := chainhash.DoubleHashB(data2)
 	return int(binary.LittleEndian.Uint64(hash2) % triedBucketCount)
 }
 
@@ -598,18 +596,16 @@ func (a *AddrManager) AddAddressByIP(addrIP string) error {
 		return err
 	}
 	// Put it in wire.Netaddress
-	var na wire.NetAddress
-	na.Timestamp = time.Now()
-	na.IP = net.ParseIP(addr)
-	if na.IP == nil {
+	ip := net.ParseIP(addr)
+	if ip == nil {
 		return fmt.Errorf("invalid ip address %s", addr)
 	}
 	port, err := strconv.ParseUint(portStr, 10, 0)
 	if err != nil {
 		return fmt.Errorf("invalid port %s: %v", portStr, err)
 	}
-	na.Port = uint16(port)
-	a.AddAddress(&na, &na) // XXX use correct src address
+	na := wire.NewNetAddressIPPort(ip, uint16(port), 0)
+	a.AddAddress(na, na) // XXX use correct src address
 	return nil
 }
 
@@ -640,19 +636,19 @@ func (a *AddrManager) NeedMoreAddresses() bool {
 func (a *AddrManager) AddressCache() []*wire.NetAddress {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
-	if a.nNew+a.nTried == 0 {
+
+	addrIndexLen := len(a.addrIndex)
+	if addrIndexLen == 0 {
 		return nil
 	}
 
-	allAddr := make([]*wire.NetAddress, a.nNew+a.nTried)
-	i := 0
+	allAddr := make([]*wire.NetAddress, 0, addrIndexLen)
 	// Iteration order is undefined here, but we randomise it anyway.
 	for _, v := range a.addrIndex {
-		allAddr[i] = v.na
-		i++
+		allAddr = append(allAddr, v.na)
 	}
 
-	numAddresses := len(allAddr) * getAddrPercent / 100
+	numAddresses := addrIndexLen * getAddrPercent / 100
 	if numAddresses > getAddrMax {
 		numAddresses = getAddrMax
 	}
@@ -661,12 +657,12 @@ func (a *AddrManager) AddressCache() []*wire.NetAddress {
 	// `numAddresses' since we are throwing the rest.
 	for i := 0; i < numAddresses; i++ {
 		// pick a number between current index and the end
-		j := rand.Intn(len(allAddr)-i) + i
+		j := rand.Intn(addrIndexLen-i) + i
 		allAddr[i], allAddr[j] = allAddr[j], allAddr[i]
 	}
 
 	// slice off the limit we are willing to share.
-	return allAddr[:numAddresses]
+	return allAddr[0:numAddresses]
 }
 
 // reset resets the address manager by reinitialising the random source
@@ -685,15 +681,15 @@ func (a *AddrManager) reset() {
 	}
 }
 
-// HostToNetAddress returns a netaddress given a host address. If the address is
-// a tor .onion address this will be taken care of. else if the host is not an
-// IP address it will be resolved (via tor if required).
+// HostToNetAddress returns a netaddress given a host address.  If the address
+// is a Tor .onion address this will be taken care of.  Else if the host is
+// not an IP address it will be resolved (via Tor if required).
 func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.ServiceFlag) (*wire.NetAddress, error) {
-	// tor address is 16 char base32 + ".onion"
+	// Tor address is 16 char base32 + ".onion"
 	var ip net.IP
 	if len(host) == 22 && host[16:] == ".onion" {
 		// go base32 encoding uses capitals (as does the rfc
-		// but tor and bitcoind tend to user lowercase, so we switch
+		// but Tor and bitcoind tend to user lowercase, so we switch
 		// case here.
 		data, err := base32.StdEncoding.DecodeString(
 			strings.ToUpper(host[:16]))
@@ -717,11 +713,11 @@ func (a *AddrManager) HostToNetAddress(host string, port uint16, services wire.S
 }
 
 // ipString returns a string for the ip from the provided NetAddress. If the
-// ip is in the range used for tor addresses then it will be transformed into
+// ip is in the range used for Tor addresses then it will be transformed into
 // the relevant .onion address.
 func ipString(na *wire.NetAddress) string {
 	if IsOnionCatTor(na) {
-		// We know now that na.IP is long enogh.
+		// We know now that na.IP is long enough.
 		base32 := base32.StdEncoding.EncodeToString(na.IP[6:])
 		return strings.ToLower(base32) + ".onion"
 	}
@@ -741,7 +737,7 @@ func NetAddressKey(na *wire.NetAddress) string {
 // random one from the possible addresses with preference given to ones that
 // have not been used recently and should not pick 'close' addresses
 // consecutively.
-func (a *AddrManager) GetAddress(class string) *KnownAddress {
+func (a *AddrManager) GetAddress() *KnownAddress {
 	// Protect concurrent access.
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
@@ -1071,16 +1067,14 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 			remoteAddr.Port)
 
 		// Send something unroutable if nothing suitable.
-		bestAddress = &wire.NetAddress{
-			Timestamp: time.Now(),
-			Services:  wire.SFNodeNetwork,
-			Port:      0,
-		}
+		var ip net.IP
 		if !IsIPv4(remoteAddr) && !IsOnionCatTor(remoteAddr) {
-			bestAddress.IP = net.IPv6zero
+			ip = net.IPv6zero
 		} else {
-			bestAddress.IP = net.IPv4zero
+			ip = net.IPv4zero
 		}
+		services := wire.SFNodeNetwork | wire.SFNodeWitness | wire.SFNodeBloom
+		bestAddress = wire.NewNetAddressIPPort(ip, 0, services)
 	}
 
 	return bestAddress

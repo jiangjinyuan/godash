@@ -1,5 +1,4 @@
 // Copyright (c) 2014 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,8 +8,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/dashpay/godash/btcec"
-	"github.com/dashpay/godash/wire"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 // This example demonstrates signing a message with a secp256k1 private key that
@@ -27,7 +26,7 @@ func Example_signMessage() {
 
 	// Sign a message using the private key.
 	message := "test message"
-	messageHash := wire.DoubleSha256([]byte(message))
+	messageHash := chainhash.DoubleHashB([]byte(message))
 	signature, err := privKey.Sign(messageHash)
 	if err != nil {
 		fmt.Println(err)
@@ -80,7 +79,7 @@ func Example_verifySignature() {
 
 	// Verify the signature for the message using the public key.
 	message := "test message"
-	messageHash := wire.DoubleSha256([]byte(message))
+	messageHash := chainhash.DoubleHashB([]byte(message))
 	verified := signature.Verify(messageHash, pubKey)
 	fmt.Println("Signature Verified?", verified)
 

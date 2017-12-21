@@ -1,5 +1,4 @@
 // Copyright (c) 2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -9,10 +8,11 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/dashpay/godash/blockchain"
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/wire"
-	"github.com/dashpay/godashutil"
+	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/database"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 )
 
 var (
@@ -29,17 +29,17 @@ var (
 //
 //   [<block hash><block height>],...
 //
-//   Field           Type           Size
-//   block hash      wire.ShaHash   wire.HashSize
-//   block height    uint32         4 bytes
+//   Field           Type             Size
+//   block hash      chainhash.Hash   chainhash.HashSize
+//   block height    uint32           4 bytes
 // -----------------------------------------------------------------------------
 
 // dbPutIndexerTip uses an existing database transaction to update or add the
 // current tip for the given index to the provided values.
-func dbPutIndexerTip(dbTx database.Tx, idxKey []byte, hash *wire.ShaHash, height int32) error {
-	serialized := make([]byte, wire.HashSize+4)
+func dbPutIndexerTip(dbTx database.Tx, idxKey []byte, hash *chainhash.Hash, height int32) error {
+	serialized := make([]byte, chainhash.HashSize+4)
 	copy(serialized, hash[:])
-	byteOrder.PutUint32(serialized[wire.HashSize:], uint32(height))
+	byteOrder.PutUint32(serialized[chainhash.HashSize:], uint32(height))
 
 	indexesBucket := dbTx.Metadata().Bucket(indexTipsBucketName)
 	return indexesBucket.Put(idxKey, serialized)
@@ -47,10 +47,10 @@ func dbPutIndexerTip(dbTx database.Tx, idxKey []byte, hash *wire.ShaHash, height
 
 // dbFetchIndexerTip uses an existing database transaction to retrieve the
 // hash and height of the current tip for the provided index.
-func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*wire.ShaHash, int32, error) {
+func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*chainhash.Hash, int32, error) {
 	indexesBucket := dbTx.Metadata().Bucket(indexTipsBucketName)
 	serialized := indexesBucket.Get(idxKey)
-	if len(serialized) < wire.HashSize+4 {
+	if len(serialized) < chainhash.HashSize+4 {
 		return nil, 0, database.Error{
 			ErrorCode: database.ErrCorruption,
 			Description: fmt.Sprintf("unexpected end of data for "+
@@ -58,9 +58,9 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*wire.ShaHash, int32, e
 		}
 	}
 
-	var hash wire.ShaHash
-	copy(hash[:], serialized[:wire.HashSize])
-	height := int32(byteOrder.Uint32(serialized[wire.HashSize:]))
+	var hash chainhash.Hash
+	copy(hash[:], serialized[:chainhash.HashSize])
+	height := int32(byteOrder.Uint32(serialized[chainhash.HashSize:]))
 	return &hash, height, nil
 }
 
@@ -68,7 +68,7 @@ func dbFetchIndexerTip(dbTx database.Tx, idxKey []byte) (*wire.ShaHash, int32, e
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the previous block for the passed block.
-func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *godashutil.Block, view *blockchain.UtxoViewpoint) error {
+func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block, view *blockchain.UtxoViewpoint) error {
 	// Assert that the block being connected properly connects to the
 	// current tip of the index.
 	idxKey := indexer.Key()
@@ -80,7 +80,7 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *godashutil.Bl
 		return AssertError(fmt.Sprintf("dbIndexConnectBlock must be "+
 			"called with a block that extends the current index "+
 			"tip (%s, tip %s, block %s)", indexer.Name(),
-			curTipHash, block.Sha()))
+			curTipHash, block.Hash()))
 	}
 
 	// Notify the indexer with the connected block so it can index it.
@@ -89,14 +89,14 @@ func dbIndexConnectBlock(dbTx database.Tx, indexer Indexer, block *godashutil.Bl
 	}
 
 	// Update the current index tip.
-	return dbPutIndexerTip(dbTx, idxKey, block.Sha(), block.Height())
+	return dbPutIndexerTip(dbTx, idxKey, block.Hash(), block.Height())
 }
 
 // dbIndexDisconnectBlock removes all of the index entries associated with the
 // given block using the provided indexer and updates the tip of the indexer
 // accordingly.  An error will be returned if the current tip for the indexer is
 // not the passed block.
-func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *godashutil.Block, view *blockchain.UtxoViewpoint) error {
+func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *btcutil.Block, view *blockchain.UtxoViewpoint) error {
 	// Assert that the block being disconnected is the current tip of the
 	// index.
 	idxKey := indexer.Key()
@@ -104,11 +104,11 @@ func dbIndexDisconnectBlock(dbTx database.Tx, indexer Indexer, block *godashutil
 	if err != nil {
 		return err
 	}
-	if !curTipHash.IsEqual(block.Sha()) {
+	if !curTipHash.IsEqual(block.Hash()) {
 		return AssertError(fmt.Sprintf("dbIndexDisconnectBlock must "+
 			"be called with the block at the current index tip "+
 			"(%s, tip %s, block %s)", indexer.Name(),
-			curTipHash, block.Sha()))
+			curTipHash, block.Hash()))
 	}
 
 	// Notify the indexer with the disconnected block so it can remove all
@@ -146,7 +146,7 @@ func indexDropKey(idxKey []byte) []byte {
 // of being dropped and finishes dropping them when the are.  This is necessary
 // because dropping and index has to be done in several atomic steps rather than
 // one big atomic step due to the massive number of entries.
-func (m *Manager) maybeFinishDrops() error {
+func (m *Manager) maybeFinishDrops(interrupt <-chan struct{}) error {
 	indexNeedsDrop := make([]bool, len(m.enabledIndexes))
 	err := m.db.View(func(dbTx database.Tx) error {
 		// None of the indexes needs to be dropped if the index tips
@@ -156,7 +156,7 @@ func (m *Manager) maybeFinishDrops() error {
 			return nil
 		}
 
-		// Make the indexer as requiring a drop if one is already in
+		// Mark the indexer as requiring a drop if one is already in
 		// progress.
 		for i, indexer := range m.enabledIndexes {
 			dropKey := indexDropKey(indexer.Key())
@@ -171,6 +171,10 @@ func (m *Manager) maybeFinishDrops() error {
 		return err
 	}
 
+	if interruptRequested(interrupt) {
+		return errInterruptRequested
+	}
+
 	// Finish dropping any of the enabled indexes that are already in the
 	// middle of being dropped.
 	for i, indexer := range m.enabledIndexes {
@@ -179,7 +183,7 @@ func (m *Manager) maybeFinishDrops() error {
 		}
 
 		log.Infof("Resuming %s drop", indexer.Name())
-		err := dropIndex(m.db, indexer.Key(), indexer.Name())
+		err := dropIndex(m.db, indexer.Key(), indexer.Name(), interrupt)
 		if err != nil {
 			return err
 		}
@@ -208,7 +212,7 @@ func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 
 		// Set the tip for the index to values which represent an
 		// uninitialized index.
-		err := dbPutIndexerTip(dbTx, idxKey, &wire.ShaHash{}, -1)
+		err := dbPutIndexerTip(dbTx, idxKey, &chainhash.Hash{}, -1)
 		if err != nil {
 			return err
 		}
@@ -225,14 +229,18 @@ func (m *Manager) maybeCreateIndexes(dbTx database.Tx) error {
 // catch up due to the I/O contention.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) Init(chain *blockchain.BlockChain) error {
+func (m *Manager) Init(chain *blockchain.BlockChain, interrupt <-chan struct{}) error {
 	// Nothing to do when no indexes are enabled.
 	if len(m.enabledIndexes) == 0 {
 		return nil
 	}
 
+	if interruptRequested(interrupt) {
+		return errInterruptRequested
+	}
+
 	// Finish and drops that were previously interrupted.
-	if err := m.maybeFinishDrops(); err != nil {
+	if err := m.maybeFinishDrops(interrupt); err != nil {
 		return err
 	}
 
@@ -267,14 +275,11 @@ func (m *Manager) Init(chain *blockchain.BlockChain) error {
 
 		// Fetch the current tip for the index.
 		var height int32
-		var hash *wire.ShaHash
+		var hash *chainhash.Hash
 		err := m.db.View(func(dbTx database.Tx) error {
 			idxKey := indexer.Key()
 			hash, height, err = dbFetchIndexerTip(dbTx, idxKey)
-			if err != nil {
-				return err
-			}
-			return nil
+			return err
 		})
 		if err != nil {
 			return err
@@ -287,15 +292,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain) error {
 
 		// Loop until the tip is a block that exists in the main chain.
 		initialHeight := height
-		for {
-			exists, err := chain.MainChainHasBlock(hash)
-			if err != nil {
-				return err
-			}
-			if exists {
-				break
-			}
-
+		for !chain.MainChainHasBlock(hash) {
 			// At this point the index tip is orphaned, so load the
 			// orphaned block from the database directly and
 			// disconnect it from the index.  The block has to be
@@ -307,7 +304,7 @@ func (m *Manager) Init(chain *blockchain.BlockChain) error {
 				if err != nil {
 					return err
 				}
-				block, err := godashutil.NewBlockFromBytes(blockBytes)
+				block, err := btcutil.NewBlockFromBytes(blockBytes)
 				if err != nil {
 					return err
 				}
@@ -319,7 +316,8 @@ func (m *Manager) Init(chain *blockchain.BlockChain) error {
 				var view *blockchain.UtxoViewpoint
 				if indexNeedsInputs(indexer) {
 					var err error
-					view, err = makeUtxoView(dbTx, block)
+					view, err = makeUtxoView(dbTx, block,
+						interrupt)
 					if err != nil {
 						return err
 					}
@@ -341,6 +339,10 @@ func (m *Manager) Init(chain *blockchain.BlockChain) error {
 			})
 			if err != nil {
 				return err
+			}
+
+			if interruptRequested(interrupt) {
+				return errInterruptRequested
 			}
 		}
 
@@ -400,6 +402,10 @@ func (m *Manager) Init(chain *blockchain.BlockChain) error {
 			return err
 		}
 
+		if interruptRequested(interrupt) {
+			return errInterruptRequested
+		}
+
 		// Connect the block for all indexes that need it.
 		var view *blockchain.UtxoViewpoint
 		for i, indexer := range m.enabledIndexes {
@@ -416,7 +422,8 @@ func (m *Manager) Init(chain *blockchain.BlockChain) error {
 				// index.
 				if view == nil && indexNeedsInputs(indexer) {
 					var err error
-					view, err = makeUtxoView(dbTx, block)
+					view, err = makeUtxoView(dbTx, block,
+						interrupt)
 					if err != nil {
 						return err
 					}
@@ -432,6 +439,10 @@ func (m *Manager) Init(chain *blockchain.BlockChain) error {
 
 		// Log indexing progress.
 		progressLogger.LogBlockHeight(block)
+
+		if interruptRequested(interrupt) {
+			return errInterruptRequested
+		}
 	}
 
 	log.Infof("Indexes caught up to height %d", bestHeight)
@@ -450,7 +461,7 @@ func indexNeedsInputs(index Indexer) bool {
 
 // dbFetchTx looks up the passed transaction hash in the transaction index and
 // loads it from the database.
-func dbFetchTx(dbTx database.Tx, hash *wire.ShaHash) (*wire.MsgTx, error) {
+func dbFetchTx(dbTx database.Tx, hash *chainhash.Hash) (*wire.MsgTx, error) {
 	// Look up the location of the transaction.
 	blockRegion, err := dbFetchTxIndexEntry(dbTx, hash)
 	if err != nil {
@@ -481,7 +492,7 @@ func dbFetchTx(dbTx database.Tx, hash *wire.ShaHash) (*wire.MsgTx, error) {
 // transactions in the block.  This is sometimes needed when catching indexes up
 // because many of the txouts could actually already be spent however the
 // associated scripts are still required to index them.
-func makeUtxoView(dbTx database.Tx, block *godashutil.Block) (*blockchain.UtxoViewpoint, error) {
+func makeUtxoView(dbTx database.Tx, block *btcutil.Block, interrupt <-chan struct{}) (*blockchain.UtxoViewpoint, error) {
 	view := blockchain.NewUtxoViewpoint()
 	for txIdx, tx := range block.Transactions() {
 		// Coinbases do not reference any inputs.  Since the block is
@@ -501,7 +512,11 @@ func makeUtxoView(dbTx database.Tx, block *godashutil.Block) (*blockchain.UtxoVi
 				return nil, err
 			}
 
-			view.AddTxOuts(godashutil.NewTx(originTx), 0)
+			view.AddTxOuts(btcutil.NewTx(originTx), 0)
+		}
+
+		if interruptRequested(interrupt) {
+			return nil, errInterruptRequested
 		}
 	}
 
@@ -513,7 +528,7 @@ func makeUtxoView(dbTx database.Tx, block *godashutil.Block) (*blockchain.UtxoVi
 // checks, and invokes each indexer.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) ConnectBlock(dbTx database.Tx, block *godashutil.Block, view *blockchain.UtxoViewpoint) error {
+func (m *Manager) ConnectBlock(dbTx database.Tx, block *btcutil.Block, view *blockchain.UtxoViewpoint) error {
 	// Call each of the currently active optional indexes with the block
 	// being connected so they can update accordingly.
 	for _, index := range m.enabledIndexes {
@@ -531,7 +546,7 @@ func (m *Manager) ConnectBlock(dbTx database.Tx, block *godashutil.Block, view *
 // the index entries associated with the block.
 //
 // This is part of the blockchain.IndexManager interface.
-func (m *Manager) DisconnectBlock(dbTx database.Tx, block *godashutil.Block, view *blockchain.UtxoViewpoint) error {
+func (m *Manager) DisconnectBlock(dbTx database.Tx, block *btcutil.Block, view *blockchain.UtxoViewpoint) error {
 	// Call each of the currently active optional indexes with the block
 	// being disconnected so they can update accordingly.
 	for _, index := range m.enabledIndexes {
@@ -559,7 +574,7 @@ func NewManager(db database.DB, enabledIndexes []Indexer) *Manager {
 // keep memory usage to reasonable levels.  It also marks the drop in progress
 // so the drop can be resumed if it is stopped before it is done before the
 // index can be used again.
-func dropIndex(db database.DB, idxKey []byte, idxName string) error {
+func dropIndex(db database.DB, idxKey []byte, idxName string, interrupt <-chan struct{}) error {
 	// Nothing to do if the index doesn't already exist.
 	var needsDelete bool
 	err := db.View(func(dbTx database.Tx) error {
@@ -620,6 +635,10 @@ func dropIndex(db database.DB, idxKey []byte, idxName string) error {
 			totalDeleted += uint64(numDeleted)
 			log.Infof("Deleted %d keys (%d total) from %s",
 				numDeleted, totalDeleted, idxName)
+		}
+
+		if interruptRequested(interrupt) {
+			return errInterruptRequested
 		}
 	}
 

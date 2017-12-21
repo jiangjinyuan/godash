@@ -1,5 +1,4 @@
 // Copyright (c) 2015-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -18,8 +17,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/wire"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/database"
+	"github.com/btcsuite/btcd/wire"
 )
 
 const (
@@ -505,7 +505,7 @@ func (s *blockStore) writeBlock(rawBlock []byte) (blockLocation, error) {
 // read from the file.
 //
 // Format: <network><block length><serialized block><checksum>
-func (s *blockStore) readBlock(hash *wire.ShaHash, loc blockLocation) ([]byte, error) {
+func (s *blockStore) readBlock(hash *chainhash.Hash, loc blockLocation) ([]byte, error) {
 	// Get the referenced block file handle opening the file as needed.  The
 	// function also handles closing files as needed to avoid going over the
 	// max allowed open files.
@@ -676,7 +676,7 @@ func (s *blockStore) handleRollback(oldBlockFileNum, oldBlockOffset uint32) {
 	}
 	for ; wc.curFileNum > oldBlockFileNum; wc.curFileNum-- {
 		if err := s.deleteFileFunc(wc.curFileNum); err != nil {
-			_ = log.Warnf("ROLLBACK: Failed to delete block file "+
+			log.Warnf("ROLLBACK: Failed to delete block file "+
 				"number %d: %v", wc.curFileNum, err)
 			return
 		}
@@ -688,7 +688,7 @@ func (s *blockStore) handleRollback(oldBlockFileNum, oldBlockOffset uint32) {
 		obf, err := s.openWriteFileFunc(wc.curFileNum)
 		if err != nil {
 			wc.curFile.Unlock()
-			_ = log.Warnf("ROLLBACK: %v", err)
+			log.Warnf("ROLLBACK: %v", err)
 			return
 		}
 		wc.curFile.file = obf
@@ -697,7 +697,7 @@ func (s *blockStore) handleRollback(oldBlockFileNum, oldBlockOffset uint32) {
 	// Truncate the to the provided rollback offset.
 	if err := wc.curFile.file.Truncate(int64(oldBlockOffset)); err != nil {
 		wc.curFile.Unlock()
-		_ = log.Warnf("ROLLBACK: Failed to truncate file %d: %v",
+		log.Warnf("ROLLBACK: Failed to truncate file %d: %v",
 			wc.curFileNum, err)
 		return
 	}
@@ -706,11 +706,10 @@ func (s *blockStore) handleRollback(oldBlockFileNum, oldBlockOffset uint32) {
 	err := wc.curFile.file.Sync()
 	wc.curFile.Unlock()
 	if err != nil {
-		_ = log.Warnf("ROLLBACK: Failed to sync file %d: %v",
+		log.Warnf("ROLLBACK: Failed to sync file %d: %v",
 			wc.curFileNum, err)
 		return
 	}
-	return
 }
 
 // scanBlockFiles searches the database directory for all flat block files to
@@ -760,7 +759,7 @@ func newBlockStore(basePath string, network wire.BitcoinNet) *blockStore {
 		writeCursor: &writeCursor{
 			curFile:    &lockableFile{},
 			curFileNum: uint32(fileNum),
-			curOffset:  uint32(fileOff),
+			curOffset:  fileOff,
 		},
 	}
 	store.openFileFunc = store.openFile

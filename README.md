@@ -1,8 +1,9 @@
 btcd
 ====
 
-[![Build Status](https://travis-ci.org/dashpay/godash.png?branch=master)]
-(https://travis-ci.org/dashpay/godash)
+[![Build Status](https://travis-ci.org/btcsuite/btcd.png?branch=master)](https://travis-ci.org/btcsuite/btcd)
+[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/btcsuite/btcd)
 
 btcd is an alternative full node bitcoin implementation written in Go (golang).
 
@@ -10,17 +11,18 @@ This project is currently under active development and is in a Beta state.  It
 is extremely stable and has been in production use since October 2013.
 
 It properly downloads, validates, and serves the block chain using the exact
-rules (including bugs) for block acceptance as Bitcoin Core.  We have taken
-great care to avoid btcd causing a fork to the block chain.  It passes all of
-the 'official' block acceptance tests
-(https://github.com/TheBlueMatt/test-scripts) as well as all of the JSON test
-data in the Bitcoin Core code.
+rules (including consensus bugs) for block acceptance as Bitcoin Core.  We have
+taken great care to avoid btcd causing a fork to the block chain.  It includes a
+full block validation testing framework which contains all of the 'official'
+block acceptance tests (and some additional ones) that is run on every pull
+request to help ensure it properly follows consensus.  Also, it passes all of
+the JSON test data in the Bitcoin Core code.
 
-It also relays newly mined blocks, maintains a transaction pool, and relays
-individual transactions that have not yet made it into a block.  It ensures all
-transactions admitted to the pool follow the rules required by the block chain
-and also includes the same checks which filter transactions based on
-miner requirements ("standard" transactions) as Bitcoin Core.
+It also properly relays newly mined blocks, maintains a transaction pool, and
+relays individual transactions that have not yet made it into a block.  It
+ensures all individual transactions admitted to the pool follow the rules
+required by the block chain and also includes more strict checks which filter
+transactions based on miner requirements ("standard" transactions).
 
 One key difference between btcd and Bitcoin Core is that btcd does *NOT* include
 wallet functionality and this was a very intentional design decision.  See the
@@ -33,13 +35,13 @@ which are both under active development.
 
 ## Requirements
 
-[Go](http://golang.org) 1.5 or newer.
+[Go](http://golang.org) 1.8 or newer.
 
 ## Installation
 
 #### Windows - MSI Available
 
-https://github.com/dashpay/godash/releases
+https://github.com/btcsuite/btcd/releases
 
 #### Linux/BSD/MacOSX/POSIX - Build from Source
 
@@ -58,16 +60,12 @@ recommended that `GOPATH` is set to a directory in your home directory such as
 `~/goprojects` to avoid write permission issues.  It is also recommended to add
 `$GOPATH/bin` to your `PATH` at this point.
 
-**NOTE:** If you are using Go 1.5, you must manually enable the vendor
-experiment by setting the `GO15VENDOREXPERIMENT` environment variable to `1`.
-This step is not required for Go 1.6.
-
 - Run the following commands to obtain btcd, all dependencies, and install it:
 
 ```bash
 $ go get -u github.com/Masterminds/glide
-$ git clone https://github.com/dashpay/godash $GOPATH/src/github.com/dashpay/godash
-$ cd $GOPATH/src/github.com/dashpay/godash
+$ git clone https://github.com/btcsuite/btcd $GOPATH/src/github.com/btcsuite/btcd
+$ cd $GOPATH/src/github.com/btcsuite/btcd
 $ glide install
 $ go install . ./cmd/...
 ```
@@ -87,7 +85,7 @@ Install a newer MSI
 - Run the following commands to update btcd, all dependencies, and install it:
 
 ```bash
-$ cd $GOPATH/src/github.com/dashpay/godash
+$ cd $GOPATH/src/github.com/btcsuite/btcd
 $ git pull && glide install
 $ go install . ./cmd/...
 ```
@@ -106,7 +104,7 @@ Launch btcd from your Start menu.
 
 ```bash
 $ ./btcd
-````
+```
 
 ## IRC
 
@@ -114,21 +112,14 @@ $ ./btcd
 - channel #btcd
 - [webchat](https://webchat.freenode.net/?channels=btcd)
 
-## Mailing lists
-
-- btcd: discussion of btcd and its packages.
-- btcd-commits: readonly mail-out of source code changes.
-
-To subscribe to a given list, send email to list+subscribe@opensource.conformal.com
-
 ## Issue Tracker
 
-The [integrated github issue tracker](https://github.com/dashpay/godash/issues)
+The [integrated github issue tracker](https://github.com/btcsuite/btcd/issues)
 is used for this project.
 
 ## Documentation
 
-The documentation is a work-in-progress.  It is located in the [docs](https://github.com/dashpay/godash/tree/master/docs) folder.
+The documentation is a work-in-progress.  It is located in the [docs](https://github.com/btcsuite/btcd/tree/master/docs) folder.
 
 ## GPG Verification Key
 
@@ -136,8 +127,8 @@ All official release tags are signed by Conformal so users can ensure the code
 has not been tampered with and is coming from the btcsuite developers.  To
 verify the signature perform the following:
 
-- Download the public key from the Conformal website at
-  https://opensource.conformal.com/GIT-GPG-KEY-conformal.txt
+- Download the Conformal public key:
+  https://raw.githubusercontent.com/btcsuite/btcd/master/release/GIT-GPG-KEY-conformal.txt
 
 - Import the public key into your GPG keyring:
   ```bash

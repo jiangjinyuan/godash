@@ -1,5 +1,4 @@
 // Copyright (c) 2015-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -11,9 +10,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/btcsuite/btcd/database"
 	"github.com/btcsuite/btclog"
-	flags "github.com/btcsuite/go-flags"
-	"github.com/dashpay/godash/database"
+	flags "github.com/jessevdk/go-flags"
 )
 
 const (
@@ -62,11 +61,11 @@ func loadBlockDB() (database.DB, error) {
 // around the fact that deferred functions do not run when os.Exit() is called.
 func realMain() error {
 	// Setup logging.
-	backendLogger := btclog.NewDefaultBackendLogger()
-	defer backendLogger.Flush()
-	log = btclog.NewSubsystemLogger(backendLogger, "")
-	dbLog := btclog.NewSubsystemLogger(backendLogger, "BCDB: ")
-	dbLog.SetLevel(btclog.DebugLvl)
+	backendLogger := btclog.NewBackend(os.Stdout)
+	defer os.Stdout.Sync()
+	log = backendLogger.Logger("MAIN")
+	dbLog := backendLogger.Logger("BCDB")
+	dbLog.SetLevel(btclog.LevelDebug)
 	database.UseLogger(dbLog)
 
 	// Setup the parser options and commands.

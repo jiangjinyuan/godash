@@ -1,27 +1,23 @@
-// Copyright (c) 2013-2015 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package wire_test
+package wire
 
-import (
-	"testing"
-
-	"github.com/dashpay/godash/wire"
-)
+import "testing"
 
 // TestServiceFlagStringer tests the stringized output for service flag types.
 func TestServiceFlagStringer(t *testing.T) {
 	tests := []struct {
-		in   wire.ServiceFlag
+		in   ServiceFlag
 		want string
 	}{
 		{0, "0x0"},
-		{wire.SFNodeNetwork, "SFNodeNetwork"},
-		{wire.SFNodeGetUTXO, "SFNodeGetUTXO"},
-		{wire.SFNodeBloom, "SFNodeBloom"},
-		{0xffffffff, "SFNodeNetwork|SFNodeGetUTXO|SFNodeBloom|0xfffffff8"},
+		{SFNodeNetwork, "SFNodeNetwork"},
+		{SFNodeGetUTXO, "SFNodeGetUTXO"},
+		{SFNodeBloom, "SFNodeBloom"},
+		{SFNodeWitness, "SFNodeWitness"},
+		{0xffffffff, "SFNodeNetwork|SFNodeGetUTXO|SFNodeBloom|SFNodeWitness|0xfffffff0"},
 	}
 
 	t.Logf("Running %d tests", len(tests))
@@ -38,13 +34,13 @@ func TestServiceFlagStringer(t *testing.T) {
 // TestBitcoinNetStringer tests the stringized output for bitcoin net types.
 func TestBitcoinNetStringer(t *testing.T) {
 	tests := []struct {
-		in   wire.BitcoinNet
+		in   BitcoinNet
 		want string
 	}{
-		{wire.MainNet, "MainNet"},
-		{wire.TestNet, "TestNet"},
-		{wire.TestNet3, "TestNet3"},
-		{wire.SimNet, "SimNet"},
+		{MainNet, "MainNet"},
+		{TestNet, "TestNet"},
+		{TestNet3, "TestNet3"},
+		{SimNet, "SimNet"},
 		{0xffffffff, "Unknown BitcoinNet (4294967295)"},
 	}
 

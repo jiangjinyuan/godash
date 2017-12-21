@@ -1,17 +1,15 @@
-// Copyright (c) 2013-2016 The btcsuite developers
-// Copyright (c) 2016 The Dash developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package blockchain_test
+package blockchain
 
 import (
 	"fmt"
 	"runtime"
 	"testing"
 
-	"github.com/dashpay/godash/blockchain"
-	"github.com/dashpay/godash/txscript"
+	"github.com/btcsuite/btcd/txscript"
 )
 
 // TestCheckBlockScripts ensures that validating the all of the scripts in a
@@ -28,6 +26,11 @@ func TestCheckBlockScripts(t *testing.T) {
 	}
 	if len(blocks) > 1 {
 		t.Errorf("The test block file must only have one block in it")
+		return
+	}
+	if len(blocks) == 0 {
+		t.Errorf("The test block file may not be empty")
+		return
 	}
 
 	storeDataFile := fmt.Sprintf("%d.utxostore.bz2", testBlockNum)
@@ -38,8 +41,7 @@ func TestCheckBlockScripts(t *testing.T) {
 	}
 
 	scriptFlags := txscript.ScriptBip16
-	err = blockchain.TstCheckBlockScripts(blocks[0], view, scriptFlags,
-		nil)
+	err = checkBlockScripts(blocks[0], view, scriptFlags, nil, nil)
 	if err != nil {
 		t.Errorf("Transaction script validation failed: %v\n", err)
 		return

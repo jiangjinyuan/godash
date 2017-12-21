@@ -385,6 +385,19 @@ func TestChainSvrCmds(t *testing.T) {
 			unmarshalled: &btcjson.GetInfoCmd{},
 		},
 		{
+			name: "getmempoolentry",
+			newCmd: func() (interface{}, error) {
+				return btcjson.NewCmd("getmempoolentry", "txhash")
+			},
+			staticCmd: func() interface{} {
+				return btcjson.NewGetMempoolEntryCmd("txhash")
+			},
+			marshalled: `{"jsonrpc":"1.0","method":"getmempoolentry","params":["txhash"],"id":1}`,
+			unmarshalled: &btcjson.GetMempoolEntryCmd{
+				TxID: "txhash",
+			},
+		},
+		{
 			name: "getmempoolinfo",
 			newCmd: func() (interface{}, error) {
 				return btcjson.NewCmd("getmempoolinfo")
@@ -683,6 +696,19 @@ func TestChainSvrCmds(t *testing.T) {
 			unmarshalled: &btcjson.PingCmd{},
 		},
 		{
+			name: "preciousblock",
+			newCmd: func() (interface{}, error) {
+				return btcjson.NewCmd("preciousblock", "0123")
+			},
+			staticCmd: func() interface{} {
+				return btcjson.NewPreciousBlockCmd("0123")
+			},
+			marshalled: `{"jsonrpc":"1.0","method":"preciousblock","params":["0123"],"id":1}`,
+			unmarshalled: &btcjson.PreciousBlockCmd{
+				BlockHash: "0123",
+			},
+		},
+		{
 			name: "reconsiderblock",
 			newCmd: func() (interface{}, error) {
 				return btcjson.NewCmd("reconsiderblock", "123")
@@ -933,6 +959,17 @@ func TestChainSvrCmds(t *testing.T) {
 					WorkID: "12345",
 				},
 			},
+		},
+		{
+			name: "uptime",
+			newCmd: func() (interface{}, error) {
+				return btcjson.NewCmd("uptime")
+			},
+			staticCmd: func() interface{} {
+				return btcjson.NewUptimeCmd()
+			},
+			marshalled:   `{"jsonrpc":"1.0","method":"uptime","params":[],"id":1}`,
+			unmarshalled: &btcjson.UptimeCmd{},
 		},
 		{
 			name: "validateaddress",
