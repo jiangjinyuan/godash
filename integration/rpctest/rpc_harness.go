@@ -171,7 +171,7 @@ func New(activeNet *chaincfg.Params, handlers *rpcclient.NotificationHandlers,
 	// callback.
 	if handlers.OnFilteredBlockConnected != nil {
 		obc := handlers.OnFilteredBlockConnected
-		handlers.OnFilteredBlockConnected = func(height int32, header *wire.BlockHeader, filteredTxns []*btcutil.Tx) {
+		handlers.OnFilteredBlockConnected = func(height int32, header *wire.BlockHeader, filteredTxns []*godashutil.Tx) {
 			wallet.IngestBlock(height, header, filteredTxns)
 			obc(height, header, filteredTxns)
 		}
@@ -227,7 +227,7 @@ func (h *Harness) SetUp(createTestChain bool, numMatureOutputs uint32) error {
 
 	// Filter transactions that pay to the coinbase associated with the
 	// wallet.
-	filterAddrs := []btcutil.Address{h.wallet.coinbaseAddr}
+	filterAddrs := []godashutil.Address{h.wallet.coinbaseAddr}
 	if err := h.Node.LoadTxFilter(true, filterAddrs, nil); err != nil {
 		return err
 	}
@@ -333,7 +333,7 @@ func (h *Harness) connectRPCClient() error {
 // wallet.
 //
 // This function is safe for concurrent access.
-func (h *Harness) NewAddress() (btcutil.Address, error) {
+func (h *Harness) NewAddress() (godashutil.Address, error) {
 	return h.wallet.NewAddress()
 }
 
@@ -341,7 +341,7 @@ func (h *Harness) NewAddress() (btcutil.Address, error) {
 // wallet.
 //
 // This function is safe for concurrent access.
-func (h *Harness) ConfirmedBalance() btcutil.Amount {
+func (h *Harness) ConfirmedBalance() godashutil.Amount {
 	return h.wallet.ConfirmedBalance()
 }
 
@@ -351,7 +351,7 @@ func (h *Harness) ConfirmedBalance() btcutil.Amount {
 //
 // This function is safe for concurrent access.
 func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*chainhash.Hash, error) {
+	feeRate godashutil.Amount) (*chainhash.Hash, error) {
 
 	return h.wallet.SendOutputs(targetOutputs, feeRate)
 }
@@ -367,7 +367,7 @@ func (h *Harness) SendOutputs(targetOutputs []*wire.TxOut,
 //
 // This function is safe for concurrent access.
 func (h *Harness) CreateTransaction(targetOutputs []*wire.TxOut,
-	feeRate btcutil.Amount) (*wire.MsgTx, error) {
+	feeRate godashutil.Amount) (*wire.MsgTx, error) {
 
 	return h.wallet.CreateTransaction(targetOutputs, feeRate)
 }
@@ -404,8 +404,8 @@ func (h *Harness) P2PAddress() string {
 // blockTime parameter if one doesn't wish to set a custom time.
 //
 // This function is safe for concurrent access.
-func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
-	blockTime time.Time) (*btcutil.Block, error) {
+func (h *Harness) GenerateAndSubmitBlock(txns []*godashutil.Tx, blockVersion int32,
+	blockTime time.Time) (*godashutil.Block, error) {
 
 	h.Lock()
 	defer h.Unlock()
@@ -422,7 +422,7 @@ func (h *Harness) GenerateAndSubmitBlock(txns []*btcutil.Tx, blockVersion int32,
 	if err != nil {
 		return nil, err
 	}
-	prevBlock := btcutil.NewBlock(mBlock)
+	prevBlock := godashutil.NewBlock(mBlock)
 	prevBlock.SetHeight(prevBlockHeight)
 
 	// Create a new block including the specified transactions

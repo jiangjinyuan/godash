@@ -26,9 +26,9 @@ const (
 )
 
 var (
-	btcdHomeDir           = btcutil.AppDataDir("btcd", false)
-	btcctlHomeDir         = btcutil.AppDataDir("btcctl", false)
-	btcwalletHomeDir      = btcutil.AppDataDir("btcwallet", false)
+	btcdHomeDir           = godashutil.AppDataDir("btcd", false)
+	btcctlHomeDir         = godashutil.AppDataDir("btcctl", false)
+	btcwalletHomeDir      = godashutil.AppDataDir("btcwallet", false)
 	defaultConfigFile     = filepath.Join(btcctlHomeDir, "btcctl.conf")
 	defaultRPCServer      = "localhost"
 	defaultRPCCertFile    = filepath.Join(btcdHomeDir, "rpc.cert")
