@@ -1095,7 +1095,7 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -1156,7 +1156,7 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/wire"
 	"io/ioutil"
@@ -1248,7 +1248,7 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/wire"
 	"io/ioutil"

@@ -15,7 +15,7 @@ import (
 	"time"
 
 	rpc "github.com/nargott/godash/rpcclient"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // nodeConfig contains all the args, and data required to launch a btcd process

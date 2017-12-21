@@ -27,7 +27,7 @@ import (
 	"github.com/nargott/godash/database"
 	_ "github.com/nargott/godash/database/ffldb"
 	"github.com/nargott/godash/mempool"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 	"github.com/btcsuite/go-socks/socks"
 	flags "github.com/jessevdk/go-flags"
 )

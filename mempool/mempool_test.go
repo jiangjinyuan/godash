@@ -18,7 +18,7 @@ import (
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/txscript"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // fakeChain is used by the pool harness to provide generated test utxos and

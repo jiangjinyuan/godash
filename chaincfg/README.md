@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 	"github.com/nargott/godash/chaincfg"
 )
 

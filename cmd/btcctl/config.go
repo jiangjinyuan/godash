@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/nargott/godash/btcjson"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 	flags "github.com/jessevdk/go-flags"
 )
 

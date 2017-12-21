@@ -11,7 +11,7 @@ import (
 	"github.com/nargott/godash/blockchain"
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // newHashFromStr converts the passed big-endian hex string into a

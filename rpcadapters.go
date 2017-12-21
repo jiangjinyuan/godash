@@ -13,7 +13,7 @@ import (
 	"github.com/nargott/godash/netsync"
 	"github.com/nargott/godash/peer"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // rpcPeer provides a peer for use with the RPC server and implements the

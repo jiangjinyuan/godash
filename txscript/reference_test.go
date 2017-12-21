@@ -17,7 +17,7 @@ import (
 
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // scriptTestName returns a descriptive test name for the given reference script

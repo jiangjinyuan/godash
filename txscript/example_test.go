@@ -13,7 +13,7 @@ import (
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/txscript"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // This example demonstrates creating a script which pays to a bitcoin address.

@@ -13,7 +13,7 @@ import (
 	"github.com/nargott/godash/database"
 	_ "github.com/nargott/godash/database/ffldb"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 	flags "github.com/jessevdk/go-flags"
 )
 

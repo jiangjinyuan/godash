@@ -14,7 +14,7 @@ import (
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/txscript"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // TestCalcMinRequiredTxRelayFee tests the calcMinRequiredTxRelayFee API.

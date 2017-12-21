@@ -9,7 +9,7 @@ import (
 
 	"github.com/nargott/godash/chaincfg"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 const (

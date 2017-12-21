@@ -20,7 +20,7 @@ import (
 	"github.com/nargott/godash/mining"
 	"github.com/nargott/godash/txscript"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 const (

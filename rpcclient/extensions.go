@@ -15,7 +15,7 @@ import (
 	"github.com/nargott/godash/btcjson"
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // FutureDebugLevelResult is a future promise to deliver the result of a

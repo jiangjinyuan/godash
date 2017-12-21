@@ -15,7 +15,7 @@ import (
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/database"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // importCmd defines the configuration options for the insecureimport command.

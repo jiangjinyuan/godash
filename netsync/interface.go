@@ -11,7 +11,7 @@ import (
 	"github.com/nargott/godash/mempool"
 	"github.com/nargott/godash/peer"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // PeerNotifier exposes methods to notify peers of status changes to

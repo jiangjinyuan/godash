@@ -11,7 +11,7 @@ import (
 
 	"github.com/nargott/godash/btcjson"
 	"github.com/nargott/godash/chaincfg/chainhash"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // FutureGenerateResult is a future promise to deliver the result of a

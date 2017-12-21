@@ -14,7 +14,7 @@ import (
 	"github.com/nargott/godash/chaincfg"
 	"github.com/nargott/godash/database"
 	_ "github.com/nargott/godash/database/ffldb"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // This example demonstrates how to create a new chain instance and use

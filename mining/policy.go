@@ -7,7 +7,7 @@ package mining
 import (
 	"github.com/nargott/godash/blockchain"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 const (

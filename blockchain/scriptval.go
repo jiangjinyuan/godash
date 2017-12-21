@@ -12,7 +12,7 @@ import (
 
 	"github.com/nargott/godash/txscript"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // txValidateItem holds a transaction along with which input to validate.

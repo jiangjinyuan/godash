@@ -17,8 +17,8 @@ import (
 	"github.com/nargott/godash/rpcclient"
 	"github.com/nargott/godash/txscript"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/nargott/godashutil"
+	"github.com/nargott/godashutil/hdkeychain"
 )
 
 var (

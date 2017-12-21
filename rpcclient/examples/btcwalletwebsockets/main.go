@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/nargott/godash/rpcclient"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 	"github.com/davecgh/go-spew/spew"
 )
 

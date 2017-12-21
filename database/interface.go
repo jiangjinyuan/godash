@@ -9,7 +9,7 @@ package database
 
 import (
 	"github.com/nargott/godash/chaincfg/chainhash"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // Cursor represents a cursor over key/value pairs and nested buckets of a

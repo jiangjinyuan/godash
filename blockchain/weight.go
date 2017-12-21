@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/nargott/godash/txscript"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 const (

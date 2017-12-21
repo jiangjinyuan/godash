@@ -12,7 +12,7 @@ import (
 
 	"github.com/nargott/godash/chaincfg"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // mustParseShortForm parses the passed short form script and returns the

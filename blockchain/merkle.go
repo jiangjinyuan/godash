@@ -11,7 +11,7 @@ import (
 
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/txscript"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 const (

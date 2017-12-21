@@ -10,7 +10,7 @@ import (
 
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/database"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // BehaviorFlags is a bitmask defining tweaks to the normal behavior when

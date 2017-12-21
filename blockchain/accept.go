@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/nargott/godash/database"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if

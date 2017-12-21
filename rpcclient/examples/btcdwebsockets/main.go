@@ -12,7 +12,7 @@ import (
 
 	"github.com/nargott/godash/rpcclient"
 	"github.com/nargott/godash/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 func main() {

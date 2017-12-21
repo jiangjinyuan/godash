@@ -11,7 +11,7 @@ import (
 
 	"github.com/nargott/godash/chaincfg"
 	"github.com/nargott/godash/database"
-	"github.com/btcsuite/btcutil"
+	"github.com/nargott/godashutil"
 )
 
 // BenchmarkBlockHeader benchmarks how long it takes to load the mainnet genesis
