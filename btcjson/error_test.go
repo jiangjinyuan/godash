@@ -8,7 +8,7 @@ package btcjson_test
 import (
 	"testing"
 
-	"github.com/dashpay/godash/btcjson"
+	"github.com/nargott/godash/btcjson"
 )
 
 // TestErrorCodeStringer tests the stringized output for the ErrorCode type.

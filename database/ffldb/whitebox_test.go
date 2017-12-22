@@ -20,10 +20,10 @@ import (
 
 	"github.com/btcsuite/goleveldb/leveldb"
 	ldberrors "github.com/btcsuite/goleveldb/leveldb/errors"
-	"github.com/dashpay/godash/chaincfg"
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/wire"
-	"github.com/dashpay/godashutil"
+	"github.com/nargott/godash/chaincfg"
+	"github.com/nargott/godash/database"
+	"github.com/nargott/godash/wire"
+	"github.com/nargott/godashutil"
 )
 
 var (

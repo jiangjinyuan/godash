@@ -25,8 +25,8 @@
 //          "fmt"
 //          "log"
 //
-//          "github.com/dashpay/godashutil"
-//          "github.com/dashpay/godash/chaincfg"
+//          "github.com/nargott/godashutil"
+//          "github.com/nargott/godash/chaincfg"
 //  )
 //
 //  var testnet = flag.Bool("testnet", false, "operate on the testnet Bitcoin network")

@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dashpay/godash/btcjson"
+	"github.com/nargott/godash/btcjson"
 )
 
 // TestIsValidIDType ensures the IsValidIDType function behaves as expected.

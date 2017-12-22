@@ -9,7 +9,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dashpay/godash/database"
+	"github.com/nargott/godash/database"
 )
 
 // TestErrorCodeStringer tests the stringized output for the ErrorCode type.

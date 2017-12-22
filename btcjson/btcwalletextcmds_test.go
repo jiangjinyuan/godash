@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dashpay/godash/btcjson"
+	"github.com/nargott/godash/btcjson"
 )
 
 // TestBtcWalletExtCmds tests all of the btcwallet extended commands marshal and

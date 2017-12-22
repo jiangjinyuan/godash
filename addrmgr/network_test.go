@@ -9,8 +9,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/dashpay/godash/addrmgr"
-	"github.com/dashpay/godash/wire"
+	"github.com/nargott/godash/addrmgr"
+	"github.com/nargott/godash/wire"
 )
 
 // TestIPTypes ensures the various functions which determine the type of an IP

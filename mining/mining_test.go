@@ -10,7 +10,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/dashpay/godashutil"
+	"github.com/nargott/godashutil"
 )
 
 // TestTxFeePrioHeap ensures the priority queue for transaction fees and

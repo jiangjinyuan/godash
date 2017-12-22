@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dashpay/godash/btcjson"
+	"github.com/nargott/godash/btcjson"
 )
 
 // TestHelpers tests the various helper functions which create pointers to

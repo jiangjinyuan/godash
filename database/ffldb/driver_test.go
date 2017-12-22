@@ -13,10 +13,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/dashpay/godash/chaincfg"
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/database/ffldb"
-	"github.com/dashpay/godashutil"
+	"github.com/nargott/godash/chaincfg"
+	"github.com/nargott/godash/database"
+	"github.com/nargott/godash/database/ffldb"
+	"github.com/nargott/godashutil"
 )
 
 // dbType is the database type name for this driver.

@@ -12,9 +12,9 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/dashpay/godash/blockchain"
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godashutil"
+	"github.com/nargott/godash/blockchain"
+	"github.com/nargott/godash/database"
+	"github.com/nargott/godashutil"
 )
 
 var (

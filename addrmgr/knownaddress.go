@@ -8,7 +8,7 @@ package addrmgr
 import (
 	"time"
 
-	"github.com/dashpay/godash/wire"
+	"github.com/nargott/godash/wire"
 )
 
 // KnownAddress tracks information about a known network address that is used

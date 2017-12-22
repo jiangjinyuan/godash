@@ -230,7 +230,7 @@ var MainNetParams = Params{
         {"dnsseed.dash.org", true},
         {"dnsseed.dashdot.io", true},
         {"dnsseed.masternode.io", false},
-        {"dnsseed.dashpay.io", true},
+        {"dnsseed.nargott.io", true},
     },
 
     // Chain parameters

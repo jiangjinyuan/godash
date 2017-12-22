@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/dashpay/godash/btcjson"
+	"github.com/nargott/godash/btcjson"
 )
 
 // TestChainSvrCmds tests all of the chain server commands marshal and unmarshal

@@ -11,10 +11,10 @@ import (
 	"runtime"
 
 	"github.com/btcsuite/btclog"
-	"github.com/dashpay/godash/blockchain"
-	"github.com/dashpay/godash/blockchain/indexers"
-	"github.com/dashpay/godash/database"
-	"github.com/dashpay/godash/limits"
+	"github.com/nargott/godash/blockchain"
+	"github.com/nargott/godash/blockchain/indexers"
+	"github.com/nargott/godash/database"
+	"github.com/nargott/godash/limits"
 )
 
 const (

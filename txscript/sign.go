@@ -9,10 +9,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dashpay/godash/btcec"
-	"github.com/dashpay/godash/chaincfg"
-	"github.com/dashpay/godash/wire"
-	"github.com/dashpay/godashutil"
+	"github.com/nargott/godash/btcec"
+	"github.com/nargott/godash/chaincfg"
+	"github.com/nargott/godash/wire"
+	"github.com/nargott/godashutil"
 )
 
 // RawTxInWitnessSignature returns the serialized ECDA signature for the input
