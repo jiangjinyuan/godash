@@ -19,7 +19,7 @@ import (
 
 // makeHeader is a convenience function to make a message header in the form of
 // a byte slice.  It is used to force errors when reading messages.
-func makeHeader(btcnet BitcoinNet, command string,
+func makeHeader(btcnet DASHNet, command string,
 	payloadLen uint32, checksum uint32) []byte {
 
 	// The length of a bitcoin message header is 24 bytes.
@@ -74,7 +74,7 @@ func TestMessage(t *testing.T) {
 		in     Message    // Value to encode
 		out    Message    // Expected decoded value
 		pver   uint32     // Protocol version for wire encoding
-		btcnet BitcoinNet // Network to use for wire encoding
+		btcnet DASHNet // Network to use for wire encoding
 		bytes  int        // Expected num bytes read/written
 	}{
 		{msgVersion, msgVersion, pver, MainNet, 125},
@@ -229,7 +229,7 @@ func TestReadMessageWireErrors(t *testing.T) {
 	tests := []struct {
 		buf     []byte     // Wire encoding
 		pver    uint32     // Protocol version for wire encoding
-		btcnet  BitcoinNet // Bitcoin network for wire encoding
+		btcnet  DASHNet // Bitcoin network for wire encoding
 		max     int        // Max size of fixed buffer to induce errors
 		readErr error      // Expected read error
 		bytes   int        // Expected num bytes read
@@ -396,7 +396,7 @@ func TestWriteMessageWireErrors(t *testing.T) {
 	tests := []struct {
 		msg    Message    // Message to encode
 		pver   uint32     // Protocol version for wire encoding
-		btcnet BitcoinNet // Bitcoin network for wire encoding
+		btcnet DASHNet // Bitcoin network for wire encoding
 		max    int        // Max size of fixed buffer to induce errors
 		err    error      // Expected error
 		bytes  int        // Expected num bytes written

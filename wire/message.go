@@ -165,7 +165,7 @@ func makeEmptyMessage(command string) (Message, error) {
 
 // messageHeader defines the header structure for all bitcoin protocol messages.
 type messageHeader struct {
-	magic    BitcoinNet // 4 bytes
+	magic    DASHNet // 4 bytes
 	command  string     // 12 bytes
 	length   uint32     // 4 bytes
 	checksum [4]byte    // 4 bytes
@@ -218,7 +218,7 @@ func discardInput(r io.Reader, n uint32) {
 // WriteMessageN writes a bitcoin Message to w including the necessary header
 // information and returns the number of bytes written.    This function is the
 // same as WriteMessage except it also returns the number of bytes written.
-func WriteMessageN(w io.Writer, msg Message, pver uint32, btcnet BitcoinNet) (int, error) {
+func WriteMessageN(w io.Writer, msg Message, pver uint32, btcnet DASHNet) (int, error) {
 	return WriteMessageWithEncodingN(w, msg, pver, btcnet, BaseEncoding)
 }
 
@@ -227,7 +227,7 @@ func WriteMessageN(w io.Writer, msg Message, pver uint32, btcnet BitcoinNet) (in
 // doesn't return the number of bytes written.  This function is mainly provided
 // for backwards compatibility with the original API, but it's also useful for
 // callers that don't care about byte counts.
-func WriteMessage(w io.Writer, msg Message, pver uint32, btcnet BitcoinNet) error {
+func WriteMessage(w io.Writer, msg Message, pver uint32, btcnet DASHNet) error {
 	_, err := WriteMessageN(w, msg, pver, btcnet)
 	return err
 }
@@ -238,7 +238,7 @@ func WriteMessage(w io.Writer, msg Message, pver uint32, btcnet BitcoinNet) erro
 // to specify the message encoding format to be used when serializing wire
 // messages.
 func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
-	btcnet BitcoinNet, encoding MessageEncoding) (int, error) {
+	btcnet DASHNet, encoding MessageEncoding) (int, error) {
 
 	totalBytes := 0
 
@@ -310,7 +310,7 @@ func WriteMessageWithEncodingN(w io.Writer, msg Message, pver uint32,
 // comprise the message.  This function is the same as ReadMessageN except it
 // allows the caller to specify which message encoding is to to consult when
 // decoding wire messages.
-func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet BitcoinNet,
+func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet DASHNet,
 	enc MessageEncoding) (int, Message, []byte, error) {
 
 	totalBytes := 0
@@ -397,7 +397,7 @@ func ReadMessageWithEncodingN(r io.Reader, pver uint32, btcnet BitcoinNet,
 // bytes read in addition to the parsed Message and raw bytes which comprise the
 // message.  This function is the same as ReadMessage except it also returns the
 // number of bytes read.
-func ReadMessageN(r io.Reader, pver uint32, btcnet BitcoinNet) (int, Message, []byte, error) {
+func ReadMessageN(r io.Reader, pver uint32, btcnet DASHNet) (int, Message, []byte, error) {
 	return ReadMessageWithEncodingN(r, pver, btcnet, BaseEncoding)
 }
 
@@ -407,7 +407,7 @@ func ReadMessageN(r io.Reader, pver uint32, btcnet BitcoinNet) (int, Message, []
 // from ReadMessageN in that it doesn't return the number of bytes read.  This
 // function is mainly provided for backwards compatibility with the original
 // API, but it's also useful for callers that don't care about byte counts.
-func ReadMessage(r io.Reader, pver uint32, btcnet BitcoinNet) (Message, []byte, error) {
+func ReadMessage(r io.Reader, pver uint32, btcnet DASHNet) (Message, []byte, error) {
 	_, msg, buf, err := ReadMessageN(r, pver, btcnet)
 	return msg, buf, err
 }
