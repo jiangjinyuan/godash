@@ -244,7 +244,7 @@ var MainNetParams = Params{
     CoinbaseMaturity:         100,
     SubsidyReductionInterval: 210240,
     TargetTimespan:           24 * 60 * 60,      // Dash: 1 day
-    TargetTimePerBlock:       time.Minute * 2.5, // Dash: 2.5 minutes
+    TargetTimePerBlock:       time.Second * 150, // Dash: 2.5 minutes
     RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
     ReduceMinDifficulty:      false,
     MinDiffReductionTime:     0,
@@ -341,7 +341,7 @@ var RegressionNetParams = Params{
     BIP0066Height:            1251,      // Used by regression tests
     SubsidyReductionInterval: 150,
     TargetTimespan:           time.Hour * 24 * 1, // DASH 1 day
-    TargetTimePerBlock:       time.Minute * 2.5,    // DASH 2.5 minutes
+    TargetTimePerBlock:       time.Second * 150,    // DASH 2.5 minutes
     RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
     ReduceMinDifficulty:      true,
     MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
@@ -418,7 +418,7 @@ var TestNet3Params = Params{
     CoinbaseMaturity:         100,
     SubsidyReductionInterval: 210240,
     TargetTimespan:           time.Hour * 24 * 1, // DASH 1 day
-    TargetTimePerBlock:       time.Minute * 2.5,    // DASH 2.5 minutes
+    TargetTimePerBlock:       time.Second * 150,    // DASH 2.5 minutes
     RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
     ReduceMinDifficulty:      true,
     MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
