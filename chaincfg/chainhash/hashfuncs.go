@@ -5,7 +5,11 @@
 
 package chainhash
 
-import "crypto/sha256"
+import (
+	"crypto/sha256"
+
+	"github.com/samli88/go-x11-hash"
+)
 
 // HashB calculates hash(b) and returns the resulting bytes.
 func HashB(b []byte) []byte {
@@ -30,4 +34,11 @@ func DoubleHashB(b []byte) []byte {
 func DoubleHashH(b []byte) Hash {
 	first := sha256.Sum256(b)
 	return Hash(sha256.Sum256(first[:]))
+}
+
+//HashX11 calculates x11 hash and returns the resulting bytes as a Hash
+func HashX11(b []byte) Hash {
+	hs, out := x11.New(), [32]byte{}
+	hs.Hash(b, out[:])
+	return Hash(out)
 }
