@@ -104,22 +104,72 @@ func (msg *MsgBlock) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) er
 // in both instances, but there is a distinct difference and separating the two
 // allows the API to be flexible enough to deal with changes.
 func (msg *MsgBlock) Deserialize(r io.Reader) error {
-	// At the current time, there is no difference between the wire encoding
-	// at protocol version 0 and the stable long-term storage format.  As
-	// a result, make use of BtcDecode.
-	//
-	// Passing an encoding type of WitnessEncoding to BtcEncode for the
-	// MessageEncoding parameter indicates that the transactions within the
-	// block are expected to be serialized according to the new
-	// serialization structure defined in BIP0141.
-	return msg.BtcDecode(r, 0, WitnessEncoding)
+	err := readBlockHeader(r, 0, &msg.Header)
+	if err != nil {
+		return err
+	}
+
+	txCount, err := ReadVarInt(r, 0)
+	if err != nil {
+		return err
+	}
+
+	// Prevent more transactions than could possibly fit into a block.
+	// It would be possible to cause memory exhaustion and panics without
+	// a sane upper bound on this count.
+	if txCount > maxTxPerBlock {
+		str := fmt.Sprintf("too many transactions to fit into a block "+
+			"[count %d, max %d]", txCount, maxTxPerBlock)
+		return messageError("MsgBlock.BtcDecode", str)
+	}
+
+	msg.Transactions = make([]*MsgTx, 0, txCount)
+	for i := uint64(0); i < txCount; i++ {
+		tx := MsgTx{}
+		err := tx.Deserialize(r)
+		if err != nil {
+			return err
+		}
+		msg.Transactions = append(msg.Transactions, &tx)
+	}
+
+	return nil
 }
 
 // DeserializeNoWitness decodes a block from r into the receiver similar to
 // Deserialize, however DeserializeWitness strips all (if any) witness data
 // from the transactions within the block before encoding them.
 func (msg *MsgBlock) DeserializeNoWitness(r io.Reader) error {
-	return msg.BtcDecode(r, 0, BaseEncoding)
+	err := readBlockHeader(r, 0, &msg.Header)
+	if err != nil {
+		return err
+	}
+
+	txCount, err := ReadVarInt(r, 0)
+	if err != nil {
+		return err
+	}
+
+	// Prevent more transactions than could possibly fit into a block.
+	// It would be possible to cause memory exhaustion and panics without
+	// a sane upper bound on this count.
+	if txCount > maxTxPerBlock {
+		str := fmt.Sprintf("too many transactions to fit into a block "+
+			"[count %d, max %d]", txCount, maxTxPerBlock)
+		return messageError("MsgBlock.BtcDecode", str)
+	}
+
+	msg.Transactions = make([]*MsgTx, 0, txCount)
+	for i := uint64(0); i < txCount; i++ {
+		tx := MsgTx{}
+		err := tx.DeserializeNoWitness(r)
+		if err != nil {
+			return err
+		}
+		msg.Transactions = append(msg.Transactions, &tx)
+	}
+
+	return nil
 }
 
 // DeserializeTxLoc decodes r in the same manner Deserialize does, but it takes
