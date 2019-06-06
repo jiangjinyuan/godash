@@ -107,6 +107,9 @@ const (
 	// for script validation, each pushed item onto the stack must be less
 	// than 10k bytes.
 	maxWitnessItemSize = 11000
+
+	// maxTxExtraPayload is the maximum allowed size for special transaction extra payload
+	maxTxExtraPayload = 10000
 )
 
 // witnessMarkerBytes are a pair of bytes specific to the witness encoding. If
@@ -649,6 +652,927 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error
 	return nil
 }
 
+// DecodeClassic is used for decoding transactions with transaction type = 0
+func (msg *MsgTx) DecodeClassic(r io.Reader, pver uint32, enc MessageEncoding) error {
+	count, err := ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+
+	// A count of zero (meaning no TxIn's to the uninitiated) indicates
+	// this is a transaction with witness data.
+	var flag [1]byte
+	if count == 0 && enc == WitnessEncoding {
+		// Next, we need to read the flag, which is a single byte.
+		if _, err = io.ReadFull(r, flag[:]); err != nil {
+			return err
+		}
+
+		// At the moment, the flag MUST be 0x01. In the future other
+		// flag types may be supported.
+		if flag[0] != 0x01 {
+			str := fmt.Sprintf("witness tx but flag byte is %x", flag)
+			return messageError("MsgTx.BtcDecode", str)
+		}
+
+		// With the Segregated Witness specific fields decoded, we can
+		// now read in the actual txin count.
+		count, err = ReadVarInt(r, pver)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Prevent more input transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxInPerMessage) {
+		str := fmt.Sprintf("too many input transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxInPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// returnScriptBuffers is a closure that returns any script buffers that
+	// were borrowed from the pool when there are any deserialization
+	// errors.  This is only valid to call before the final step which
+	// replaces the scripts with the location in a contiguous buffer and
+	// returns them.
+	returnScriptBuffers := func() {
+		for _, txIn := range msg.TxIn {
+			if txIn == nil {
+				continue
+			}
+
+			if txIn.SignatureScript != nil {
+				scriptPool.Return(txIn.SignatureScript)
+			}
+
+			for _, witnessElem := range txIn.Witness {
+				if witnessElem != nil {
+					scriptPool.Return(witnessElem)
+				}
+			}
+		}
+		for _, txOut := range msg.TxOut {
+			if txOut == nil || txOut.PkScript == nil {
+				continue
+			}
+			scriptPool.Return(txOut.PkScript)
+		}
+	}
+
+	// Deserialize the inputs.
+	var totalScriptSize uint64
+	txIns := make([]TxIn, count)
+	msg.TxIn = make([]*TxIn, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		ti := &txIns[i]
+		msg.TxIn[i] = ti
+		err = readTxIn(r, pver, msg.Version, ti)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(ti.SignatureScript))
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	// Prevent more output transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxOutPerMessage) {
+		returnScriptBuffers()
+		str := fmt.Sprintf("too many output transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxOutPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// Deserialize the outputs.
+	txOuts := make([]TxOut, count)
+	msg.TxOut = make([]*TxOut, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		to := &txOuts[i]
+		msg.TxOut[i] = to
+		err = readTxOut(r, pver, msg.Version, to)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(to.PkScript))
+	}
+
+	// If the transaction's flag byte isn't 0x00 at this point, then one or
+	// more of its inputs has accompanying witness data.
+	if flag[0] != 0 && enc == WitnessEncoding {
+		for _, txin := range msg.TxIn {
+			// For each input, the witness is encoded as a stack
+			// with one or more items. Therefore, we first read a
+			// varint which encodes the number of stack items.
+			witCount, err := ReadVarInt(r, pver)
+			if err != nil {
+				returnScriptBuffers()
+				return err
+			}
+
+			// Prevent a possible memory exhaustion attack by
+			// limiting the witCount value to a sane upper bound.
+			if witCount > maxWitnessItemsPerInput {
+				returnScriptBuffers()
+				str := fmt.Sprintf("too many witness items to fit "+
+					"into max message size [count %d, max %d]",
+					witCount, maxWitnessItemsPerInput)
+				return messageError("MsgTx.BtcDecode", str)
+			}
+
+			// Then for witCount number of stack items, each item
+			// has a varint length prefix, followed by the witness
+			// item itself.
+			txin.Witness = make([][]byte, witCount)
+			for j := uint64(0); j < witCount; j++ {
+				txin.Witness[j], err = readScript(r, pver,
+					maxWitnessItemSize, "script witness item")
+				if err != nil {
+					returnScriptBuffers()
+					return err
+				}
+				totalScriptSize += uint64(len(txin.Witness[j]))
+			}
+		}
+	}
+
+	msg.LockTime, err = binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	// Create a single allocation to house all of the scripts and set each
+	// input signature script and output public key script to the
+	// appropriate subslice of the overall contiguous buffer.  Then, return
+	// each individual script buffer back to the pool so they can be reused
+	// for future deserializations.  This is done because it significantly
+	// reduces the number of allocations the garbage collector needs to
+	// track, which in turn improves performance and drastically reduces the
+	// amount of runtime overhead that would otherwise be needed to keep
+	// track of millions of small allocations.
+	//
+	// NOTE: It is no longer valid to call the returnScriptBuffers closure
+	// after these blocks of code run because it is already done and the
+	// scripts in the transaction inputs and outputs no longer point to the
+	// buffers.
+	var offset uint64
+	scripts := make([]byte, totalScriptSize)
+	for i := 0; i < len(msg.TxIn); i++ {
+		// Copy the signature script into the contiguous buffer at the
+		// appropriate offset.
+		signatureScript := msg.TxIn[i].SignatureScript
+		copy(scripts[offset:], signatureScript)
+
+		// Reset the signature script of the transaction input to the
+		// slice of the contiguous buffer where the script lives.
+		scriptSize := uint64(len(signatureScript))
+		end := offset + scriptSize
+		msg.TxIn[i].SignatureScript = scripts[offset:end:end]
+		offset += scriptSize
+
+		// Return the temporary script buffer to the pool.
+		scriptPool.Return(signatureScript)
+
+		for j := 0; j < len(msg.TxIn[i].Witness); j++ {
+			// Copy each item within the witness stack for this
+			// input into the contiguous buffer at the appropriate
+			// offset.
+			witnessElem := msg.TxIn[i].Witness[j]
+			copy(scripts[offset:], witnessElem)
+
+			// Reset the witness item within the stack to the slice
+			// of the contiguous buffer where the witness lives.
+			witnessElemSize := uint64(len(witnessElem))
+			end := offset + witnessElemSize
+			msg.TxIn[i].Witness[j] = scripts[offset:end:end]
+			offset += witnessElemSize
+
+			// Return the temporary buffer used for the witness stack
+			// item to the pool.
+			scriptPool.Return(witnessElem)
+		}
+	}
+	for i := 0; i < len(msg.TxOut); i++ {
+		// Copy the public key script into the contiguous buffer at the
+		// appropriate offset.
+		pkScript := msg.TxOut[i].PkScript
+		copy(scripts[offset:], pkScript)
+
+		// Reset the public key script of the transaction output to the
+		// slice of the contiguous buffer where the script lives.
+		scriptSize := uint64(len(pkScript))
+		end := offset + scriptSize
+		msg.TxOut[i].PkScript = scripts[offset:end:end]
+		offset += scriptSize
+
+		// Return the temporary script buffer to the pool.
+		scriptPool.Return(pkScript)
+	}
+
+	return nil
+}
+
+// DecodeCoinbase is used for decoding transactions with transaction type = 5 (Coinbase transactions)
+// Extra payload provided with this transaction is omitted
+func (msg *MsgTx) DecodeCoinbase(r io.Reader, pver uint32) error {
+	count, err := ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+
+	// Prevent more input transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxInPerMessage) {
+		str := fmt.Sprintf("too many input transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxInPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// returnScriptBuffers is a closure that returns any script buffers that
+	// were borrowed from the pool when there are any deserialization
+	// errors.  This is only valid to call before the final step which
+	// replaces the scripts with the location in a contiguous buffer and
+	// returns them.
+	returnScriptBuffers := func() {
+		for _, txIn := range msg.TxIn {
+			if txIn == nil {
+				continue
+			}
+
+			if txIn.SignatureScript != nil {
+				scriptPool.Return(txIn.SignatureScript)
+			}
+
+			for _, witnessElem := range txIn.Witness {
+				if witnessElem != nil {
+					scriptPool.Return(witnessElem)
+				}
+			}
+		}
+		for _, txOut := range msg.TxOut {
+			if txOut == nil || txOut.PkScript == nil {
+				continue
+			}
+			scriptPool.Return(txOut.PkScript)
+		}
+	}
+
+	// Deserialize the inputs.
+	var totalScriptSize uint64
+	txIns := make([]TxIn, count)
+	msg.TxIn = make([]*TxIn, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		ti := &txIns[i]
+		msg.TxIn[i] = ti
+		err = readTxIn(r, pver, msg.Version, ti)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(ti.SignatureScript))
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	// Prevent more output transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxOutPerMessage) {
+		returnScriptBuffers()
+		str := fmt.Sprintf("too many output transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxOutPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// Deserialize the outputs.
+	txOuts := make([]TxOut, count)
+	msg.TxOut = make([]*TxOut, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		to := &txOuts[i]
+		msg.TxOut[i] = to
+		err = readTxOut(r, pver, msg.Version, to)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(to.PkScript))
+	}
+
+	msg.LockTime, err = binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	if count > uint64(maxTxExtraPayload) {
+		str := fmt.Sprintf("extra payload is larger than the max allowed size "+
+			"[count %d, max %d]", count, maxTxExtraPayload)
+		return messageError("BtcDecode", str)
+	}
+	b := make([]byte, count)
+	_, err = io.ReadFull(r, b)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	// Create a single allocation to house all of the scripts and set each
+	// input signature script and output public key script to the
+	// appropriate subslice of the overall contiguous buffer.  Then, return
+	// each individual script buffer back to the pool so they can be reused
+	// for future deserializations.  This is done because it significantly
+	// reduces the number of allocations the garbage collector needs to
+	// track, which in turn improves performance and drastically reduces the
+	// amount of runtime overhead that would otherwise be needed to keep
+	// track of millions of small allocations.
+	//
+	// NOTE: It is no longer valid to call the returnScriptBuffers closure
+	// after these blocks of code run because it is already done and the
+	// scripts in the transaction inputs and outputs no longer point to the
+	// buffers.
+	var offset uint64
+	scripts := make([]byte, totalScriptSize)
+	for i := 0; i < len(msg.TxIn); i++ {
+		// Copy the signature script into the contiguous buffer at the
+		// appropriate offset.
+		signatureScript := msg.TxIn[i].SignatureScript
+		copy(scripts[offset:], signatureScript)
+
+		// Reset the signature script of the transaction input to the
+		// slice of the contiguous buffer where the script lives.
+		scriptSize := uint64(len(signatureScript))
+		end := offset + scriptSize
+		msg.TxIn[i].SignatureScript = scripts[offset:end:end]
+		offset += scriptSize
+
+		// Return the temporary script buffer to the pool.
+		scriptPool.Return(signatureScript)
+
+		for j := 0; j < len(msg.TxIn[i].Witness); j++ {
+			// Copy each item within the witness stack for this
+			// input into the contiguous buffer at the appropriate
+			// offset.
+			witnessElem := msg.TxIn[i].Witness[j]
+			copy(scripts[offset:], witnessElem)
+
+			// Reset the witness item within the stack to the slice
+			// of the contiguous buffer where the witness lives.
+			witnessElemSize := uint64(len(witnessElem))
+			end := offset + witnessElemSize
+			msg.TxIn[i].Witness[j] = scripts[offset:end:end]
+			offset += witnessElemSize
+
+			// Return the temporary buffer used for the witness stack
+			// item to the pool.
+			scriptPool.Return(witnessElem)
+		}
+	}
+	for i := 0; i < len(msg.TxOut); i++ {
+		// Copy the public key script into the contiguous buffer at the
+		// appropriate offset.
+		pkScript := msg.TxOut[i].PkScript
+		copy(scripts[offset:], pkScript)
+
+		// Reset the public key script of the transaction output to the
+		// slice of the contiguous buffer where the script lives.
+		scriptSize := uint64(len(pkScript))
+		end := offset + scriptSize
+		msg.TxOut[i].PkScript = scripts[offset:end:end]
+		offset += scriptSize
+
+		// Return the temporary script buffer to the pool.
+		scriptPool.Return(pkScript)
+	}
+
+	return nil
+}
+
+// DecodeProReg is used for decoding transactions with transaction type = 1
+// Extra payload provided with this transaction is omitted
+func (msg *MsgTx) DecodeProReg(r io.Reader, pver uint32) error {
+	count, err := ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+
+	// Prevent more input transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxInPerMessage) {
+		str := fmt.Sprintf("too many input transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxInPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// returnScriptBuffers is a closure that returns any script buffers that
+	// were borrowed from the pool when there are any deserialization
+	// errors.  This is only valid to call before the final step which
+	// replaces the scripts with the location in a contiguous buffer and
+	// returns them.
+	returnScriptBuffers := func() {
+		for _, txIn := range msg.TxIn {
+			if txIn == nil {
+				continue
+			}
+
+			if txIn.SignatureScript != nil {
+				scriptPool.Return(txIn.SignatureScript)
+			}
+
+			for _, witnessElem := range txIn.Witness {
+				if witnessElem != nil {
+					scriptPool.Return(witnessElem)
+				}
+			}
+		}
+		for _, txOut := range msg.TxOut {
+			if txOut == nil || txOut.PkScript == nil {
+				continue
+			}
+			scriptPool.Return(txOut.PkScript)
+		}
+	}
+
+	// Deserialize the inputs.
+	var totalScriptSize uint64
+	txIns := make([]TxIn, count)
+	msg.TxIn = make([]*TxIn, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		ti := &txIns[i]
+		msg.TxIn[i] = ti
+		err = readTxIn(r, pver, msg.Version, ti)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(ti.SignatureScript))
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	// Prevent more output transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxOutPerMessage) {
+		returnScriptBuffers()
+		str := fmt.Sprintf("too many output transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxOutPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// Deserialize the outputs.
+	txOuts := make([]TxOut, count)
+	msg.TxOut = make([]*TxOut, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		to := &txOuts[i]
+		msg.TxOut[i] = to
+		err = readTxOut(r, pver, msg.Version, to)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(to.PkScript))
+	}
+
+	msg.LockTime, err = binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		return err
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+	b := make([]byte, count)
+	_, err = io.ReadFull(r, b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DecodeProUpServ is used for decoding transactions with transaction type = 2
+// Extra payload provided with this transaction is omitted
+func (msg *MsgTx) DecodeProUpServ(r io.Reader, pver uint32) error {
+	count, err := ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+
+	// Prevent more input transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxInPerMessage) {
+		str := fmt.Sprintf("too many input transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxInPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// returnScriptBuffers is a closure that returns any script buffers that
+	// were borrowed from the pool when there are any deserialization
+	// errors.  This is only valid to call before the final step which
+	// replaces the scripts with the location in a contiguous buffer and
+	// returns them.
+	returnScriptBuffers := func() {
+		for _, txIn := range msg.TxIn {
+			if txIn == nil {
+				continue
+			}
+
+			if txIn.SignatureScript != nil {
+				scriptPool.Return(txIn.SignatureScript)
+			}
+
+			for _, witnessElem := range txIn.Witness {
+				if witnessElem != nil {
+					scriptPool.Return(witnessElem)
+				}
+			}
+		}
+		for _, txOut := range msg.TxOut {
+			if txOut == nil || txOut.PkScript == nil {
+				continue
+			}
+			scriptPool.Return(txOut.PkScript)
+		}
+	}
+
+	// Deserialize the inputs.
+	var totalScriptSize uint64
+	txIns := make([]TxIn, count)
+	msg.TxIn = make([]*TxIn, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		ti := &txIns[i]
+		msg.TxIn[i] = ti
+		err = readTxIn(r, pver, msg.Version, ti)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(ti.SignatureScript))
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	// Prevent more output transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxOutPerMessage) {
+		returnScriptBuffers()
+		str := fmt.Sprintf("too many output transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxOutPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// Deserialize the outputs.
+	txOuts := make([]TxOut, count)
+	msg.TxOut = make([]*TxOut, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		to := &txOuts[i]
+		msg.TxOut[i] = to
+		err = readTxOut(r, pver, msg.Version, to)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(to.PkScript))
+	}
+
+	msg.LockTime, err = binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		return err
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+	b := make([]byte, count)
+	_, err = io.ReadFull(r, b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DecodeProUpReg is used for decoding transactions with transaction type = 3
+// Extra payload provided with this transaction is omitted
+func (msg *MsgTx) DecodeProUpReg(r io.Reader, pver uint32) error {
+	count, err := ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+
+	// Prevent more input transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxInPerMessage) {
+		str := fmt.Sprintf("too many input transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxInPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// returnScriptBuffers is a closure that returns any script buffers that
+	// were borrowed from the pool when there are any deserialization
+	// errors.  This is only valid to call before the final step which
+	// replaces the scripts with the location in a contiguous buffer and
+	// returns them.
+	returnScriptBuffers := func() {
+		for _, txIn := range msg.TxIn {
+			if txIn == nil {
+				continue
+			}
+
+			if txIn.SignatureScript != nil {
+				scriptPool.Return(txIn.SignatureScript)
+			}
+
+			for _, witnessElem := range txIn.Witness {
+				if witnessElem != nil {
+					scriptPool.Return(witnessElem)
+				}
+			}
+		}
+		for _, txOut := range msg.TxOut {
+			if txOut == nil || txOut.PkScript == nil {
+				continue
+			}
+			scriptPool.Return(txOut.PkScript)
+		}
+	}
+
+	// Deserialize the inputs.
+	var totalScriptSize uint64
+	txIns := make([]TxIn, count)
+	msg.TxIn = make([]*TxIn, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		ti := &txIns[i]
+		msg.TxIn[i] = ti
+		err = readTxIn(r, pver, msg.Version, ti)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(ti.SignatureScript))
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	// Prevent more output transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxOutPerMessage) {
+		returnScriptBuffers()
+		str := fmt.Sprintf("too many output transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxOutPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// Deserialize the outputs.
+	txOuts := make([]TxOut, count)
+	msg.TxOut = make([]*TxOut, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		to := &txOuts[i]
+		msg.TxOut[i] = to
+		err = readTxOut(r, pver, msg.Version, to)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(to.PkScript))
+	}
+
+	msg.LockTime, err = binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		return err
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+	b := make([]byte, count)
+	_, err = io.ReadFull(r, b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DecodeProUpRev is used for decoding transactions with transaction type = 4
+// Extra payload provided with this transaction is omitted
+func (msg *MsgTx) DecodeProUpRev(r io.Reader, pver uint32) error {
+	count, err := ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+
+	// Prevent more input transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxInPerMessage) {
+		str := fmt.Sprintf("too many input transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxInPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// returnScriptBuffers is a closure that returns any script buffers that
+	// were borrowed from the pool when there are any deserialization
+	// errors.  This is only valid to call before the final step which
+	// replaces the scripts with the location in a contiguous buffer and
+	// returns them.
+	returnScriptBuffers := func() {
+		for _, txIn := range msg.TxIn {
+			if txIn == nil {
+				continue
+			}
+
+			if txIn.SignatureScript != nil {
+				scriptPool.Return(txIn.SignatureScript)
+			}
+
+			for _, witnessElem := range txIn.Witness {
+				if witnessElem != nil {
+					scriptPool.Return(witnessElem)
+				}
+			}
+		}
+		for _, txOut := range msg.TxOut {
+			if txOut == nil || txOut.PkScript == nil {
+				continue
+			}
+			scriptPool.Return(txOut.PkScript)
+		}
+	}
+
+	// Deserialize the inputs.
+	var totalScriptSize uint64
+	txIns := make([]TxIn, count)
+	msg.TxIn = make([]*TxIn, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		ti := &txIns[i]
+		msg.TxIn[i] = ti
+		err = readTxIn(r, pver, msg.Version, ti)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(ti.SignatureScript))
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		returnScriptBuffers()
+		return err
+	}
+
+	// Prevent more output transactions than could possibly fit into a
+	// message.  It would be possible to cause memory exhaustion and panics
+	// without a sane upper bound on this count.
+	if count > uint64(maxTxOutPerMessage) {
+		returnScriptBuffers()
+		str := fmt.Sprintf("too many output transactions to fit into "+
+			"max message size [count %d, max %d]", count,
+			maxTxOutPerMessage)
+		return messageError("MsgTx.BtcDecode", str)
+	}
+
+	// Deserialize the outputs.
+	txOuts := make([]TxOut, count)
+	msg.TxOut = make([]*TxOut, count)
+	for i := uint64(0); i < count; i++ {
+		// The pointer is set now in case a script buffer is borrowed
+		// and needs to be returned to the pool on error.
+		to := &txOuts[i]
+		msg.TxOut[i] = to
+		err = readTxOut(r, pver, msg.Version, to)
+		if err != nil {
+			returnScriptBuffers()
+			return err
+		}
+		totalScriptSize += uint64(len(to.PkScript))
+	}
+
+	msg.LockTime, err = binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		return err
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+	b := make([]byte, count)
+	_, err = io.ReadFull(r, b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// DecodeQuorumCommitment is used for decoding transactions with transaction type = 6
+// Extra payload provided with this transaction is omitted
+func (msg *MsgTx) DecodeQuorumCommitment(r io.Reader, pver uint32) error {
+	// txIn count
+	count, err := ReadVarInt(r, pver) //this must be 0
+	if err != nil {
+		return err
+	}
+	// txOut count
+	count, err = ReadVarInt(r, pver) //this must be 0
+	if err != nil {
+		return err
+	}
+
+	msg.LockTime, err = binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		return err
+	}
+
+	count, err = ReadVarInt(r, pver)
+	if err != nil {
+		return err
+	}
+
+	if count > uint64(maxTxExtraPayload) {
+		str := fmt.Sprintf("extra payload is larger than the max allowed size "+
+			"[count %d, max %d]", count, maxTxExtraPayload)
+		return messageError("BtcDecode", str)
+	}
+	b := make([]byte, count)
+	_, err = io.ReadFull(r, b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Deserialize decodes a transaction from r into the receiver using a format
 // that is suitable for long-term storage such as a database while respecting
 // the Version field in the transaction.  This function differs from BtcDecode
@@ -660,10 +1584,31 @@ func (msg *MsgTx) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) error
 // difference and separating the two allows the API to be flexible enough to
 // deal with changes.
 func (msg *MsgTx) Deserialize(r io.Reader) error {
-	// At the current time, there is no difference between the wire encoding
-	// at protocol version 0 and the stable long-term storage format.  As
-	// a result, make use of BtcDecode.
-	return msg.BtcDecode(r, 0, WitnessEncoding)
+	version, err := binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		return err
+	}
+	msg.Version = int32(version)
+	txType := int16(msg.Version >> 16)
+
+	switch txType {
+	case 0:
+		return msg.DecodeClassic(r, 0, WitnessEncoding)
+	case 1:
+		return msg.DecodeProReg(r, 0)
+	case 2:
+		return msg.DecodeProUpServ(r, 0)
+	case 3:
+		return msg.DecodeProUpReg(r, 0)
+	case 4:
+		return msg.DecodeProUpRev(r, 0)
+	case 5:
+		return msg.DecodeCoinbase(r, 0)
+	case 6:
+		return msg.DecodeQuorumCommitment(r, 0)
+	}
+
+	return fmt.Errorf("Not supported transaction type")
 }
 
 // DeserializeNoWitness decodes a transaction from r into the receiver, where
@@ -671,7 +1616,32 @@ func (msg *MsgTx) Deserialize(r io.Reader) error {
 // serialization format created to encode transaction bearing witness data
 // within inputs.
 func (msg *MsgTx) DeserializeNoWitness(r io.Reader) error {
-	return msg.BtcDecode(r, 0, BaseEncoding)
+
+	version, err := binarySerializer.Uint32(r, littleEndian)
+	if err != nil {
+		return err
+	}
+	msg.Version = int32(version)
+	txType := int16(msg.Version >> 16)
+
+	switch txType {
+	case 0:
+		return msg.DecodeClassic(r, 0, BaseEncoding)
+	case 1:
+		return msg.DecodeProReg(r, 0)
+	case 2:
+		return msg.DecodeProUpServ(r, 0)
+	case 3:
+		return msg.DecodeProUpReg(r, 0)
+	case 4:
+		return msg.DecodeProUpRev(r, 0)
+	case 5:
+		return msg.DecodeCoinbase(r, 0)
+	case 6:
+		return msg.DecodeQuorumCommitment(r, 0)
+	}
+
+	return fmt.Errorf("Not supported transaction type")
 }
 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
