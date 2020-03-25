@@ -47,6 +47,34 @@ type GetBlockVerboseResult struct {
 	NextHash      string        `json:"nextblockhash,omitempty"`
 }
 
+// GetBlockStatsResult models the data from the getblockstats command when the
+// hash flag is set.
+type GetBlockStatsResult struct {
+	AvgFee        int64  `json:"avgfee"`
+	AvgFeeRate    int64  `json:"avgfeerate"`
+	AvgTxSize     int64  `json:"avgtxsize"`
+	BlockHash     string `json:"blockhash"`
+	Height        int64  `json:"height"`
+	InPuts        int64  `json:"ins"`
+	MaxFee        int64  `json:"maxfee"`
+	MaxFeeRate    int64  `json:"maxfeerate"`
+	MaxTxSize     int64  `json:"maxtxsize"`
+	MedianFee     int64  `json:"medianfee"`
+	MedianFeeRate int64  `json:"medianfeerate"`
+	MedianTime    int64  `json:"mediantime"`
+	MedianTxSize  int64  `json:"mediantxsize"`
+	MinFee        int64  `json:"minfee"`
+	MinFeeRate    int64  `json:"minfeerate"`
+	MinTxSize     int64  `json:"mintxsize"`
+	OutPuts       int64  `json:"outs"`
+	SubSidy       int64  `json:"subsidy"`
+	Time          int64  `json:"time"`
+	TotalOut      int64  `json:"total_out"`
+	TotalSize     int64  `json:"total_size"`
+	TotalFee      int64  `json:"totalfee"`
+	Txs           int64  `json:"txs"`
+}
+
 // CreateMultiSigResult models the data returned from the createmultisig
 // command.
 type CreateMultiSigResult struct {

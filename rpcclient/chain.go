@@ -154,6 +154,38 @@ func (c *Client) GetBlockVerbose(blockHash *chainhash.Hash) (*btcjson.GetBlockVe
 	return c.GetBlockVerboseAsync(blockHash).Receive()
 }
 
+// For Dash rpc method getblockstats
+type FutureGetBlockStatsResult chan *response
+
+func (r FutureGetBlockStatsResult) Receive() (*btcjson.GetBlockStatsResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the raw result into a BlockResult.
+	var blockResult btcjson.GetBlockStatsResult
+	err = json.Unmarshal(res, &blockResult)
+	if err != nil {
+		return nil, err
+	}
+	return &blockResult, nil
+}
+
+func (c *Client) GetBlockStatsAsync(blockHash *chainhash.Hash) FutureGetBlockStatsResult {
+	hash := ""
+	if blockHash != nil {
+		hash = blockHash.String()
+	}
+
+	cmd := btcjson.NewGetBlockStatsCmd(hash, nil)
+	return c.sendCmd(cmd)
+}
+
+func (c *Client) GetBlockStats(blockHash *chainhash.Hash) (*btcjson.GetBlockStatsResult,error) {
+	return c.GetBlockStatsAsync(blockHash).Receive()
+}
+
 // GetBlockVerboseTxAsync returns an instance of a type that can be used to get
 // the result of the RPC at some future time by invoking the Receive function on
 // the returned instance.

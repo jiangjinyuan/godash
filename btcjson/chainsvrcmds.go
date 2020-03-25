@@ -279,6 +279,24 @@ func NewGetBlockTemplateCmd(request *TemplateRequest) *GetBlockTemplateCmd {
 	}
 }
 
+// GetBlockStatsCmd defines the getblockstats JSON-RPC command.
+type GetBlockStatsCmd struct {
+	Hash      string
+	Verbose   *bool   `jsonrpcdefault:"true"`
+}
+
+// NewGetBlockStatsCmd returns a new instance which can be used to issue a getblockstats
+// JSON-RPC command.
+//
+// The parameters which are pointers indicate they are optional.  Passing nil
+// for optional parameters will use the default value.
+func NewGetBlockStatsCmd(hash string, verbose *bool) *GetBlockStatsCmd {
+	return &GetBlockStatsCmd{
+		Hash:      hash,
+		Verbose:   verbose,
+	}
+}
+
 // GetChainTipsCmd defines the getchaintips JSON-RPC command.
 type GetChainTipsCmd struct{}
 
@@ -756,6 +774,7 @@ func init() {
 	MustRegisterCmd("getblockhash", (*GetBlockHashCmd)(nil), flags)
 	MustRegisterCmd("getblockheader", (*GetBlockHeaderCmd)(nil), flags)
 	MustRegisterCmd("getblocktemplate", (*GetBlockTemplateCmd)(nil), flags)
+	MustRegisterCmd("getblockstats", (*GetBlockStatsCmd)(nil), flags)
 	MustRegisterCmd("getchaintips", (*GetChainTipsCmd)(nil), flags)
 	MustRegisterCmd("getconnectioncount", (*GetConnectionCountCmd)(nil), flags)
 	MustRegisterCmd("getdifficulty", (*GetDifficultyCmd)(nil), flags)
