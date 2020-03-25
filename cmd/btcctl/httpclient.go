@@ -11,7 +11,7 @@ import (
 	"net/http"
 
 	"github.com/btcsuite/go-socks/socks"
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 )
 
 // newHTTPClient returns a new HTTP client that is configured according to the

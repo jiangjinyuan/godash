@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 )
 
 // TestBtcdExtCmds tests all of the btcd extended commands marshal and unmarshal

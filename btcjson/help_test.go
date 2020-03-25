@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 )
 
 // TestHelpReflectInternals ensures the various help functions which deal with

@@ -7,15 +7,15 @@ package main
 import (
 	"log"
 
-	"github.com/nargott/godash/rpcclient"
+	"github.com/jiangjinyuan/godash/rpcclient"
 )
 
 func main() {
 	// Connect to local bitcoin core RPC server using HTTP POST mode.
 	connCfg := &rpcclient.ConnConfig{
-		Host:         "localhost:8332",
-		User:         "yourrpcuser",
-		Pass:         "yourrpcpass",
+		Host:         "127.0.0.1:9998",
+		User:         "dashrpc",
+		Pass:         "s/qLIdHltuWcQ/7QfDeWzNeth20ol1p7S+uw69NTvqVU",
 		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
 		DisableTLS:   true, // Bitcoin core does not provide TLS by default
 	}
@@ -32,5 +32,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	hash,_:=client.GetBestBlockHash()
+	a,_:=client.GetBlockStats(hash)
+	log.Printf("block stat: %v",a)
 	log.Printf("Block count: %d", blockCount)
 }

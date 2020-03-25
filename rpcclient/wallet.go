@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 	"github.com/nargott/godash/chaincfg"
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/wire"

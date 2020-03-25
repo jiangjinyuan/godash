@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godashutil"
 )

@@ -10,7 +10,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 )
 
 // TestUsageFlagStringer tests the stringized output for the UsageFlag type.

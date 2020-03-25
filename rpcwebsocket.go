@@ -23,7 +23,7 @@ import (
 	"golang.org/x/crypto/ripemd160"
 
 	"github.com/nargott/godash/blockchain"
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 	"github.com/nargott/godash/chaincfg"
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/database"

@@ -10,7 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 	"github.com/nargott/godash/chaincfg/chainhash"
 	"github.com/nargott/godash/wire"
 )

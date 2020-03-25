@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/nargott/godash/btcjson"
+	"github.com/jiangjinyuan/godash/btcjson"
 	"github.com/nargott/godashutil"
 	flags "github.com/jessevdk/go-flags"
 )
