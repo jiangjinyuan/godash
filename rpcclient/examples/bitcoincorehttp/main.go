@@ -13,9 +13,9 @@ import (
 func main() {
 	// Connect to local bitcoin core RPC server using HTTP POST mode.
 	connCfg := &rpcclient.ConnConfig{
-		Host:         "127.0.0.1:9998",
-		User:         "dashrpc",
-		Pass:         "s/qLIdHltuWcQ/7QfDeWzNeth20ol1p7S+uw69NTvqVU",
+		Host:         "127.0.0.1:8232",
+		User:         "zcashd",
+		Pass:         "zcashdpasswd",
 		HTTPPostMode: true, // Bitcoin core only supports HTTP POST mode
 		DisableTLS:   true, // Bitcoin core does not provide TLS by default
 	}
@@ -33,7 +33,8 @@ func main() {
 		log.Fatal(err)
 	}
 	hash,_:=client.GetBestBlockHash()
-	a,_:=client.GetBlockStats(hash)
-	log.Printf("block stat: %v",a)
+	//a,_:=client.GetBlockStats(hash)
+	a,_:=client.GetBlockVerbose(hash)
+	log.Printf("block: %v",a)
 	log.Printf("Block count: %d", blockCount)
 }
